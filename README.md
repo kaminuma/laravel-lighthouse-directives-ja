@@ -1,2 +1,0 @@
-# lighthouse-directives
-ディレクティブのまとめ
