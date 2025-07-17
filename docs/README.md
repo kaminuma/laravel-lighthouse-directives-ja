@@ -13,4 +13,36 @@
 
 ---
 
-各章のサイドバーやリンクから詳細なディレクティブ解説をご覧ください。 
+各章のサイドバーやリンクから詳細なディレクティブ解説をご覧ください。
+
+---
+
+## ローカルでDocsifyドキュメントを閲覧したい方へ
+
+この日本語解説は、GitHubリポジトリでも公開しています。
+Docsifyで見やすいWebドキュメントとしてローカル起動も可能です。
+
+### 起動方法
+
+1. リポジトリをクローン
+   ```sh
+   git clone https://github.com/kaminuma/lighthouse-directives.git
+   cd lighthouse-directives
+   ```
+2. Docsifyをインストール（初回のみ）
+   ```sh
+   npm install -g docsify-cli
+   ```
+   ※権限エラーが出る場合は `npx docsify-cli serve docs` でもOK
+3. ドキュメントサーバーを起動
+   ```sh
+   docsify serve docs
+   ```
+   または
+   ```sh
+   npx docsify-cli serve docs
+   ```
+4. ブラウザで [http://localhost:3000](http://localhost:3000) を開く
+
+### リポジトリ
+- [kaminuma/lighthouse-directives](https://github.com/kaminuma/lighthouse-directives) 
