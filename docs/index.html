@@ -6,9 +6,203 @@
   <title>Lighthouse ディレクティブ解説集</title>
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
   <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <style>
+    .directive-search-box {
+      margin: 2em auto 1em auto;
+      max-width: 480px;
+      display: flex;
+      flex-direction: column;
+      align-items: stretch;
+    }
+    /* Docsifyの.contentクラスの上部余白を詰める */
+    .content {
+      padding-top: 0 !important;
+    }
+    .directive-search-box input {
+      padding: 0.6em 1em;
+      font-size: 1.1em;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      margin-bottom: 0.5em;
+    }
+    .directive-search-results {
+      background: #fff;
+      border-radius: 6px;
+      box-shadow: 0 2px 8px #0001;
+      padding: 2em 1em 1em 1em;
+      margin-top: 1.5em;
+    }
+    .directive-search-results ul {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+    .directive-search-results li {
+      margin-bottom: 0.7em;
+      border-bottom: 1px solid #eee;
+      padding-bottom: 0.5em;
+    }
+    .directive-search-results li:last-child {
+      border-bottom: none;
+    }
+    .directive-search-results .dir-name {
+      font-weight: bold;
+      color: #42b983;
+      font-size: 1.1em;
+    }
+    .directive-search-results .dir-summary {
+      color: #444;
+      font-size: 0.98em;
+      margin-top: 0.1em;
+    }
+  </style>
 </head>
 <body>
+  <div class="directive-search-box">
+    <input type="text" id="directive-search-input" placeholder="ディレクティブ名や説明で検索..." autocomplete="off">
+    <div class="directive-search-results" id="directive-search-results" style="display:none;"></div>
+  </div>
   <div id="app"></div>
+  <script>
+    // ディレクティブ一覧データ
+    const directives = [
+      // 01 認証・認可
+      { name: '@auth', summary: '現在認証済みのユーザーを返す。主にQuery.meなどで利用。', link: '01_auth_permission.md' },
+      { name: '@guard', summary: '指定ガードでの認証チェックを行う。', link: '01_auth_permission.md' },
+      { name: '@canModel', summary: 'モデル全体や作成操作の認可（ポリシーability）を行う。', link: '01_auth_permission.md' },
+      { name: '@canFind', summary: 'ID等でモデルを検索し、その認可（ポリシーability）を行う。', link: '01_auth_permission.md' },
+      { name: '@canQuery', summary: '一覧取得クエリの結果に対して認可（ポリシーability）を行う。', link: '01_auth_permission.md' },
+      { name: '@canResolved', summary: '取得済みモデルインスタンスに対して認可（ポリシーability）を行う。', link: '01_auth_permission.md' },
+      { name: '@canRoot', summary: '親オブジェクトに対する認可（ポリシーability）を行う。', link: '01_auth_permission.md' },
+      { name: '@whereAuth', summary: '認証ユーザーに紐づくデータのみをフィルタする。', link: '01_auth_permission.md' },
+      // 02 リレーション
+      { name: '@belongsTo', summary: 'BelongsTo（1対多逆方向）リレーションを解決。', link: '02_relationships.md' },
+      { name: '@belongsToMany', summary: 'BelongsToMany（多対多）リレーションを解決。', link: '02_relationships.md' },
+      { name: '@hasOne', summary: 'HasOne（1対1）リレーションを解決。', link: '02_relationships.md' },
+      { name: '@hasMany', summary: 'HasMany（1対多）リレーションを解決。', link: '02_relationships.md' },
+      { name: '@hasOneThrough', summary: '中間テーブル経由の1対1リレーションを解決。', link: '02_relationships.md' },
+      { name: '@hasManyThrough', summary: '中間テーブル経由の1対多リレーションを解決。', link: '02_relationships.md' },
+      { name: '@morphOne', summary: 'ポリモーフィックな1対1リレーションを解決。', link: '02_relationships.md' },
+      { name: '@morphMany', summary: 'ポリモーフィックな1対多リレーションを解決。', link: '02_relationships.md' },
+      { name: '@morphTo', summary: 'ポリモーフィックな所属リレーションを解決。', link: '02_relationships.md' },
+      { name: '@morphToMany', summary: 'ポリモーフィックな多対多リレーションを解決。', link: '02_relationships.md' },
+      // 03 入力と検証
+      { name: '@spread', summary: 'ネスト入力オブジェクトのフィールドを親引数に展開。', link: '03_input_validation.md' },
+      { name: '@rules', summary: 'Laravelバリデーションルールで引数や入力を検証。', link: '03_input_validation.md' },
+      { name: '@rulesForArray', summary: '配列そのものにバリデーションを適用。', link: '03_input_validation.md' },
+      { name: '@validator', summary: 'カスタムPHPクラスでバリデーション。', link: '03_input_validation.md' },
+      { name: '@trim', summary: '文字列入力の前後空白を自動除去。', link: '03_input_validation.md' },
+      { name: '@hash', summary: '引数値をハッシュ化（主にパスワード用）。', link: '03_input_validation.md' },
+      { name: '@convertEmptyStringsToNull', summary: '空文字列を自動的にnullに変換。', link: '03_input_validation.md' },
+      { name: '@inject', summary: 'GraphQLコンテキストから値を自動注入。', link: '03_input_validation.md' },
+      { name: '@drop', summary: '引数値を無視（破棄）してリゾルバに渡さない。', link: '03_input_validation.md' },
+      // 04 モデルバインディング・Eloquent
+      { name: '@bind', summary: 'ID等からモデルインスタンスを自動取得・バインド。', link: '04_model_eloquent.md' },
+      { name: '@model', summary: 'GraphQL型とEloquentモデルクラスを明示的にマッピング。', link: '04_model_eloquent.md' },
+      { name: '@method', summary: '親オブジェクトのメソッドを呼び出して値を解決。', link: '04_model_eloquent.md' },
+      { name: '@scope', summary: 'Eloquentスコープメソッドをクエリビルダに適用。', link: '04_model_eloquent.md' },
+      { name: '@with', summary: '関連リレーションをEagerロード（N+1防止）。', link: '04_model_eloquent.md' },
+      { name: '@withCount', summary: '関連リレーションの件数のみEagerロード。', link: '04_model_eloquent.md' },
+      { name: '@withoutGlobalScopes', summary: 'グローバルスコープをクエリから除外。', link: '04_model_eloquent.md' },
+      { name: '@lazyLoad', summary: '取得済みモデル群に遅延Eagerロードを適用。', link: '04_model_eloquent.md' },
+      // 05 フィールド制御
+      { name: '@hide', summary: '指定要素をスキーマから除外しクライアントから隠す。', link: '05_field_control.md' },
+      { name: '@show', summary: '指定環境でのみスキーマに表示。', link: '05_field_control.md' },
+      { name: '@feature', summary: '機能フラグでスキーマ要素の公開/非公開を制御。', link: '05_field_control.md' },
+      { name: '@rename', summary: 'フィールドや引数の内部名を変更。', link: '05_field_control.md' },
+      { name: '@deprecated', summary: '要素を非推奨としてマーク。', link: '05_field_control.md' },
+      { name: '@enum', summary: 'Enum値に内部値を割り当て。', link: '05_field_control.md' },
+      { name: '@scalar', summary: 'カスタムスカラー型と実装クラスを関連付け。', link: '05_field_control.md' },
+      { name: '@interface', summary: 'インターフェース型解決ロジックをカスタマイズ。', link: '05_field_control.md' },
+      { name: '@union', summary: 'ユニオン型解決ロジックをカスタマイズ。', link: '05_field_control.md' },
+      // 06 データ取得とリゾルバ
+      { name: '@all', summary: 'モデルの全レコードを取得。', link: '06_data_retrieval.md' },
+      { name: '@paginate', summary: 'ページネーション付きで複数エントリを取得。', link: '06_data_retrieval.md' },
+      { name: '@find', summary: '単一モデルを検索して返す。', link: '06_data_retrieval.md' },
+      { name: '@first', summary: '複数ヒット時に最初の1件を返す。', link: '06_data_retrieval.md' },
+      { name: '@count', summary: '関連やモデル自体の件数を返す。', link: '06_data_retrieval.md' },
+      { name: '@aggregate', summary: '集計関数（SUM/AVG等）を実行し結果を返す。', link: '06_data_retrieval.md' },
+      { name: '@orderBy', summary: '結果の並び順を指定。', link: '06_data_retrieval.md' },
+      { name: '@limit', summary: '返す最大件数を制限。', link: '06_data_retrieval.md' },
+      { name: '@search', summary: '全文検索（フルテキストサーチ）を行う。', link: '06_data_retrieval.md' },
+      { name: '@node', summary: 'Relay規約のグローバルIDでノード取得。', link: '06_data_retrieval.md' },
+      { name: '@globalId', summary: 'IDをグローバルID形式でエンコード/デコード。', link: '06_data_retrieval.md' },
+      // 07 その他ユーティリティ
+      { name: '@async', summary: 'ミューテーションを非同期ジョブとして実行。', link: '07_utilities.md' },
+      { name: '@broadcast', summary: 'ミューテーション結果をサブスクリプション経由で配信。', link: '07_utilities.md' },
+      { name: '@subscription', summary: 'サブスクリプションのブロードキャスト方法を指定。', link: '07_utilities.md' },
+      { name: '@cache', summary: 'フィールド結果をサーバーサイドキャッシュ。', link: '07_utilities.md' },
+      { name: '@cacheControl', summary: 'HTTPキャッシュヘッダのヒントを設定。', link: '07_utilities.md' },
+      { name: '@cacheKey', summary: 'キャッシュキーをカスタマイズ。', link: '07_utilities.md' },
+      { name: '@clearCache', summary: 'キャッシュを無効化（クリア）する。', link: '07_utilities.md' },
+      { name: '@complexity', summary: 'クエリ複雑度スコア計算をカスタマイズ。', link: '07_utilities.md' },
+      { name: '@throttle', summary: 'フィールドへのアクセス回数をレート制限。', link: '07_utilities.md' },
+      { name: '@event', summary: '解決完了後にLaravelイベントをディスパッチ。', link: '07_utilities.md' },
+    ];
+
+    const input = document.getElementById('directive-search-input');
+    const resultsBox = document.getElementById('directive-search-results');
+
+    // 検索ロジックの正規化用関数
+    function normalizeAnchor(anchor) {
+      // Docsifyのid生成ルールに合わせて@auth→auth（@や-を除去）
+      return anchor.replace(/^[@-]/, '').toLowerCase();
+    }
+    function fileNameNoMd(file) {
+      return file.replace(/\.md$/, '');
+    }
+
+    input.addEventListener('input', function() {
+      const q = input.value.trim().toLowerCase();
+      if (!q) {
+        resultsBox.style.display = 'none';
+        resultsBox.innerHTML = '';
+        return;
+      }
+      const filtered = directives.filter(d =>
+        d.name.toLowerCase().includes(q) ||
+        d.summary.toLowerCase().includes(q)
+      );
+      if (filtered.length === 0) {
+        resultsBox.innerHTML = '<div>該当するディレクティブはありません。</div>';
+        resultsBox.style.display = 'block';
+        return;
+      }
+      resultsBox.innerHTML = '<ul>' + filtered.map(d => {
+        // ルーティングとアンカーを正規化
+        const file = fileNameNoMd(d.link);
+        const anchor = normalizeAnchor(d.name);
+        const hashLink = `#/${file}?id=${anchor}`;
+        return `<li><a href="${hashLink}" class="dir-name directive-link" data-anchor="${anchor}">${d.name}</a><div class="dir-summary">${d.summary}</div></li>`;
+      }).join('') + '</ul>';
+      resultsBox.style.display = 'block';
+    });
+
+    // 検索候補クリック時のルーティング・表示整合性
+    document.addEventListener('click', function(e) {
+      if (e.target.classList.contains('directive-link')) {
+        // ディレクティブ名のみをフォームにセット
+        input.value = e.target.textContent;
+        // 候補一覧を非表示
+        resultsBox.style.display = 'none';
+        resultsBox.innerHTML = '';
+        // DocsifyのSPA遷移のため、setTimeoutで遷移後に実行
+        const anchor = e.target.getAttribute('data-anchor');
+        setTimeout(() => {
+          // id正規化（event）
+          let el = document.getElementById(anchor);
+          if (el) {
+            const orig = el.style.backgroundColor;
+            el.style.transition = 'background 0.7s';
+            el.style.backgroundColor = '#ffe082';
+            setTimeout(() => {
+              el.style.backgroundColor = orig || '';
+            }, 1200);
+          }
+        }, 350);
+      }
+    }, true);
+  </script>
   <script>
     window.$docsify = {
       name: 'Lighthouse ディレクティブ解説集',
