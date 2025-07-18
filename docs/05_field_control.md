@@ -165,3 +165,112 @@ union SearchResult @union(resolveType: "App\\GraphQL\\Unions\\SearchResult@resol
 - インターフェースと同様、Lighthouseは通常自動でユニオン型を判別しますが、オブジェクトがどちらにも共通点がなく判定が難しい場合に本ディレクティブでカスタムロジックを書けます。解決関数の実装方法はインターフェースの場合と同じく、TypeRegistry等から型を取得して返す形になります。既定の挙動で足りるケースが多いため、必要な場合のみ導入してください。
 
 --- 
+
+### @field
+
+**概要**  
+フィールドにカスタムリゾルバ関数（クラス@メソッド形式）を割り当てるディレクティブです。Eloquentモデルやデフォルトの自動解決ではなく、独自のPHP関数でフィールド値を返したい場合に利用します。
+
+**主な用途**
+- 複雑なビジネスロジックや外部API連携など、モデル自動解決では対応できない場合
+- 型やフィールドごとに独自の処理を割り当てたい場合
+
+**使用例**
+```graphql
+type Query {
+  customGreeting(name: String!): String @field(resolver: "App\\GraphQL\\Queries\\Greeting@resolve")
+}
+```
+この例では、`App\GraphQL\Queries\Greeting`クラスの`resolve`メソッドが呼ばれ、引数`name`を使って任意の文字列を返せます。
+
+**注意点**
+- `resolver`引数で「クラス@メソッド」形式を指定します。クラスは`__invoke`メソッドでもOKです。
+- クラスは`app/GraphQL/Queries`や`app/GraphQL/Mutations`等、Lighthouseの自動検出パスに置くのが推奨です。
+- 型や引数の一致に注意し、GraphQLスキーマとPHP側のシグネチャを揃えてください。
+- Eloquentモデルの自動解決や@method等と併用する場合は、どちらが優先されるか設計に注意しましょう。
+- 複雑なロジックや外部サービス連携、認可・バリデーションなどもこのカスタムリゾルバ内で自由に実装できます。 
+
+---
+
+### @method
+
+**概要**  
+Eloquentモデルの特定メソッドをリゾルバとして割り当てるディレクティブです。
+
+**使用例**
+```graphql
+type User {
+  fullName: String! @method(name: "getFullName")
+}
+```
+
+**注意点**
+- name引数でメソッド名を指定。
+
+---
+
+### @model
+
+**概要**  
+GraphQL型とEloquentモデルを明示的に紐付けるディレクティブです。
+
+**使用例**
+```graphql
+type User @model(class: "App\\Models\\User") {
+  ...
+}
+```
+
+**注意点**
+- class引数でモデルクラスを指定。
+
+---
+
+### @rules
+
+**概要**  
+入力値のバリデーションルールを指定するディレクティブです。
+
+**使用例**
+```graphql
+type Mutation {
+  createUser(input: CreateUserInput! @rules(apply: ["required", "email"])): User
+}
+```
+
+**注意点**
+- apply引数でバリデーションルールを配列で指定。
+
+---
+
+### @rulesForArray
+
+**概要**  
+配列入力の各要素にバリデーションルールを適用するディレクティブです。
+
+**使用例**
+```graphql
+type Mutation {
+  createUsers(input: [CreateUserInput!]! @rulesForArray(apply: ["required"])): [User]
+}
+```
+
+**注意点**
+- apply引数でルール指定。
+
+---
+
+### @validator
+
+**概要**  
+カスタムバリデータクラスを指定してバリデーションを行うディレクティブです。
+
+**使用例**
+```graphql
+type Mutation {
+  createUser(input: CreateUserInput! @validator(class: "App\\GraphQL\\Validators\\UserValidator")): User
+}
+```
+
+**注意点**
+- class引数でバリデータクラスを指定。 

@@ -105,59 +105,51 @@ Mechanicモデルに`carOwner()`メソッド（`hasOneThrough`でOwnerを返す�
 ### @hasManyThrough
 
 **概要**  
-Eloquentの「HasManyThrough（中間テーブル経由1対多）」リレーションを解決するディレクティブです。  
-2段階離れた関連先（例：Country → Mechanic → Car）の多対多コレクションを取得します。
+Eloquentの「HasManyThrough（中間テーブル経由1対多）」リレーションを解決するディレクティブです。
 
 **使用例**
 ```graphql
-# 国が保有する全ての車一覧を取得
-cars: [Car!]! @hasManyThrough
+type Country {
+  cars: [Car!]! @hasManyThrough
+}
 ```
-Countryモデルに`cars()`メソッドが定義されていれば、内部でCountry → Mechanic → Carのリレーションを返します。
 
 **注意点**
-- `@hasManyThrough`も`@hasMany`と同様に`type`や`relation`、`scopes`が利用可能です。
-- 使い方は`@hasMany`と同じです。
+- @hasManyと同様にtypeやrelation、scopesが利用可能。
 
 ---
 
 ### @morphOne
 
 **概要**  
-Eloquentの「MorphOne（ポリモーフィックな1対1）」リレーションを解決するディレクティブです。  
-1つのモデルが別の複数タイプのモデルに属する場合の1対1を取得します。
+Eloquentの「MorphOne（ポリモーフィックな1対1）」リレーションを解決するディレクティブです。
 
 **使用例**
 ```graphql
-# 投稿またはユーザーに紐づく画像を取得
-image: Image! @morphOne
+type Post {
+  image: Image! @morphOne
+}
 ```
-Postモデルに`image()`メソッド（`morphOne`）が定義されていれば、GraphQLで該当Imageを取得できます。
 
 **注意点**
-- 他のリレーション同様、フィールド名とリレーション名が異なる場合は`relation`で指定。
-- `scopes`でクエリスコープも適用可能。
-- 逆側（画像側）では通常`@morphTo`を使って多態リレーションを解決します。
+- relationやscopes引数でカスタマイズ可能。
 
 ---
 
 ### @morphMany
 
 **概要**  
-Eloquentの「MorphMany（ポリモーフィックな1対多）」リレーションを解決するディレクティブです。  
-1つのモデル（例：投稿）に複数種類のモデル（画像やコメントなど）が属する場合の1対多を取得します。
+Eloquentの「MorphMany（ポリモーフィックな1対多）」リレーションを解決するディレクティブです。
 
 **使用例**
 ```graphql
-# 投稿が複数の画像を持つ場合
-images: [Image!] @morphMany
+type Post {
+  images: [Image!] @morphMany
+}
 ```
-Postモデルに`images()`メソッド（`morphMany`）が必要です。
 
 **注意点**
-- `@morphMany`も`type`引数でページネーション指定可能（`PAGINATOR`・`SIMPLE`・`CONNECTION`）。
-- `relation`や`scopes`引数の使い方も他のリレーションと同様です。
-- 多態リレーションの場合、関連先が複数のモデル型になるため、GraphQL上は`union`型やインターフェースで表現することがあります。
+- typeやrelation、scopes引数が利用可能。
 
 ---
 
