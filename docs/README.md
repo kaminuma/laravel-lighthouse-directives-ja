@@ -9,7 +9,10 @@
 - [04 モデルバインディング・Eloquent](04_model_eloquent.md)
 - [05 フィールド制御](05_field_control.md)
 - [06 データ取得とリゾルバ](06_data_retrieval.md)
-- [07 その他ユーティリティ](07_utilities.md)
+- [07 ユーティリティ](07_utilities.md)
+- [08 リアルタイム機能](08_realtime.md)
+- [09 パフォーマンス最適化](09_performance.md)
+- [10 スキーマカスタマイズ](10_schema_customization.md)
 
 ---
 

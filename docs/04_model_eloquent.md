@@ -94,41 +94,51 @@ type Query {
 ### @with
 
 **概要**  
-リゾルバ実行時に関連リレーションをEagerロード（高速化のため事前読み込み）するディレクティブです。  
-N+1問題を防ぐため、あるフィールドの解決に必要な関連データをあらかじめ取得する用途で使われます。
+EloquentリレーションをEagerロードするディレクティブです。N+1問題の回避や関連データの事前取得に利用します。
 
 **使用例**
 ```graphql
-type User {
-  taskSummary: String! @with(relation: "tasks") @method(name: "getTaskSummary")
+type Query {
+  users: [User!]! @all @with(relations: ["posts", "profile"])
 }
 ```
-まず`@with(relation: "tasks")`によりUserモデルの`tasks`リレーションがEagerロードされ、続いて`getTaskSummary`メソッド（@method）が実行されます。これにより、各Userごとにタスクを個別クエリで取りに行くことなく効率的にフィールドを解決できます。
 
 **注意点**
-- `relation`引数でロードするリレーション名を指定します（省略時はフィールド名と同じと見なします）。
-- `scopes`引数で関連クエリにスコープを適用することも可能です。
-- `@with`はフィールド自体の値を直接返すものではなく、あくまで最適化のために関連データを取得するだけです。単に関連コレクションを返したいだけなら、`@hasMany`など該当リレーション用ディレクティブを使う方が適切です。
+- relations引数でリレーション名を配列で指定。
 
 ---
 
 ### @withCount
 
 **概要**  
-フィールドがクエリされた際に、指定したリレーションの件数のみをEagerロード（事前取得）するディレクティブです。  
-フィールド自体の結果として値を返すわけではなく、主に内部計算用に関連数をあらかじめ取得しておくために使います。
+Eloquentリレーションの件数をEagerロードするディレクティブです。
+
+**使用例**
+```graphql
+type Query {
+  users: [User!]! @all @withCount(relations: ["posts"])
+}
+```
+
+**注意点**
+- relations引数でリレーション名を配列で指定。
+
+---
+
+### @lazyLoad
+
+**概要**  
+必要なタイミングでリレーションを遅延ロードするディレクティブです。
 
 **使用例**
 ```graphql
 type User {
-  activityStatistics: ActivityStatistics! @withCount(relation: "posts")
+  posts: [Post!]! @hasMany @lazyLoad
 }
 ```
-この例では`@withCount(relation: "posts")`により各User毎の`posts_count`（投稿件数）がクエリの段階で取得されます。Resolverではこの件数を使って`activityStatistics`を組み立てることができます。
 
 **注意点**
-- このディレクティブ自体はフィールドに直接値を提供しません。単に`posts_count`のような集計値をEagerロードするだけで、GraphQLスキーマ上そのフィールドからcountが返ることはありません（countを返したいだけなら`@count`ディレクティブがあります）。
-- 内部で`withCount('relation')`が実行されるため、利用時は対応するリレーションがモデルに存在する必要があります。
+- パフォーマンス最適化やメモリ節約に有効。
 
 ---
 
@@ -153,23 +163,83 @@ type Query {
 
 ---
 
-### @lazyLoad
+### @morphTo
 
 **概要**  
-取得済みの複数モデルに対し、後から遅延Eagerロード（Lazy Eager Loading）を行うディレクティブです。  
-すでに得た結果集合に対し、関連をまとめてロードすることでN+1クエリを防ぎます。
+Eloquentの「MorphTo（ポリモーフィックな多対一）」リレーションを解決するディレクティブです。
+
+**使用例**
+```graphql
+type Image {
+  imageable: Imageable! @morphTo
+}
+```
+
+**注意点**
+- relationやscopes引数でカスタマイズ可能。
+
+---
+
+### @morphToMany
+
+**概要**  
+Eloquentの「MorphToMany（ポリモーフィックな多対多）」リレーションを解決するディレクティブです。
+
+**使用例**
+```graphql
+type Post {
+  tags: [Tag!]! @morphToMany
+}
+```
+
+**注意点**
+- typeやrelation、scopes引数が利用可能。
+
+---
+
+### @namespace
+
+**概要**  
+他のディレクティブで使用されるデフォルトの名前空間を再定義するディレクティブです。
+
+**使用例**
+```graphql
+schema @namespace(field: "App\\GraphQL\\Fields")
+```
+
+**注意点**
+- ディレクティブ名を名前空間にマッピングする繰り返し可能なディレクティブです。
+
+---
+
+### @namespaced
+
+**概要**  
+クエリやミューテーションのネストを可能にするno-opリゾルバを提供し、関心の分離による名前空間化に役立ちます。
 
 **使用例**
 ```graphql
 type Query {
-  posts: [Post!]! @all @lazyLoad
+  admin: AdminQuery @namespaced
 }
 ```
-このようにフィールドに付与して、resolve完了後に一括で関連をロードする、といった利用が可能です。
 
 **注意点**
-- `@lazyLoad`はリストフィールドに対して適用し、得られたコレクションに対してLaravelの`load()`的な処理を行います。
-- 引数等で具体的なリレーション名を指定する仕様になっているはずなので、利用時はドキュメントを確認してください（例: `@lazyLoad(relation: "author")`など）。
-- このディレクティブも`enhanceBuilder()`を介すフィールドでのみ意味があります。複数の関連をまとめてロードする際に便利ですが、初回取得クエリとは別に追加クエリが走る点は留意してください。
+- 論理的な名前空間化や関心の分離に利用します。
 
---- 
+---
+
+### @nest
+
+**概要**  
+子のArgResolverディレクティブに呼び出しを委譲するno-opネストされた引数リゾルバで、論理的なグループ化に役立ちます。
+
+**使用例**
+```graphql
+type Mutation {
+  updateUser(input: UpdateUserInput! @nest): User! @update
+}
+```
+
+**注意点**
+- ネストされた入力のグループ化やバリデーションに利用します。 

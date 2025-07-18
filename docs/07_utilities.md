@@ -25,41 +25,69 @@ type Mutation {
 ### @broadcast
 
 **概要**  
-ミューテーションの結果をGraphQLの**サブスクリプション**経由でブロードキャスト（配信）するディレクティブです。特定のサブスクリプションイベント名を指定し、そのミューテーションが成功した際に購読中のクライアントへ通知を送ります。
+ミューテーションの結果をGraphQLの**サブスクリプション**経由でブロードキャスト（配信）するディレクティブです。
+
+**主な用途**
+- ミューテーション完了時にクライアントへリアルタイム通知
 
 **使用例**
 ```graphql
 type Mutation {
-  createPost(input: CreatePostInput!): Post 
-    @broadcast(subscription: "postCreated")
+    createPost(input: CreatePostInput!): Post 
+        @broadcast(subscription: "postCreated")
 }
 ```
-対応するサブスクリプションフィールド（例：`postCreated: Post`）をクライアントが購読していれば、このミューテーション完了時にリアルタイム通知を受け取れます。`shouldQueue`引数をtrueにするとブロードキャスト自体をキューに乗せ非同期送信できます。
 
 **注意点**
-- `subscription`引数にはサブスクリプションフィールド名を文字列で指定します。これはミューテーションとサブスクリプションの対応を取るために必須です。
-- 不特定多数へのリアルタイム通知となるため、ブロードキャストドライバ（Pusher等）の設定と、Lighthouseのサブスクリプション設定が正しく行われている必要があります。
+- `subscription`引数で対応するサブスクリプションフィールド名を指定します
+- shouldQueueをtrueにするとブロードキャスト自体をキューで非同期送信できます
+
+---
+
+### @event
+
+**概要**  
+フィールド解決後にLaravelのイベントをディスパッチするディレクティブです。
+
+**主な用途**
+- ミューテーションやクエリの完了後にイベントを発火
+- 他システムとの連携や非同期処理のトリガー
+
+**使用例**
+```graphql
+type Mutation {
+    createPost(input: CreatePostInput!): Post 
+        @event(class: "App\\Events\\PostCreated")
+        @create
+}
+```
+
+**注意点**
+- `class`引数でイベントクラス名を指定します
+- イベントにはリゾルバから得られた値や引数を渡すことができます
 
 ---
 
 ### @subscription
 
 **概要**  
-GraphQLサブスクリプションフィールドに対して、ブロードキャストの方法を指定するディレクティブです。通常は規約に従えば自動処理されますが、カスタム実装が必要な場合にこのディレクティブでハンドラクラスを登録します。
+GraphQLサブスクリプションのブロードキャスト処理方法を定義するディレクティブです。
+
+**主な用途**
+- サブスクリプション型の定義
+- クライアントへのリアルタイム通知
 
 **使用例**
 ```graphql
 type Subscription {
-  postUpdated(author: ID!): Post 
-    @subscription(class: "App\\GraphQL\\Blog\\PostUpdatedSubscription")
+    postUpdated(author: ID!): Post 
+        @subscription(class: "App\\GraphQL\\Blog\\PostUpdatedSubscription")
 }
 ```
-`class`引数には`Nuwave\Lighthouse\Schema\Types\GraphQLSubscription`を継承したクラスを指定します。これによりサブスクリプション発行時やフィルタリングのロジックを自前で書くことができます。
 
 **注意点**
-- 規約上、サブスクリプションフィールド名に対応するクラス（例: `PostUpdatedSubscription`）を`app/GraphQL/Subscriptions`以下に用意すれば`@subscription`なしでも検出されます。
-- ディレクティブはあくまで**命名規約から外れる場合**や**複数のサブスクリプションを1クラスで扱う特殊ケース**等で使います。
-- サブスクリプションはサーバー設定（WebSocket等）も必要なため、詳しくはLighthouseのSubscriptionsガイドを参照してください。
+- サブスクリプションクラスはNuwave\Lighthouse\Schema\Types\GraphQLSubscriptionのサブクラスである必要があります
+- 認証・認可の実装に注意
 
 ---
 
@@ -134,26 +162,5 @@ type Mutation {
 - GraphQLフィールドの組み合わせごとに細かい制御が必要な場合、`prefix`引数でグループ化もできます。
 - Laravelで`Response`を返すようなレートリミッタはLighthouseではサポートされない点に注意してください。
 - 制限カウントの単位はデフォルトではIPアドレスですが、Passport等と組み合わせユーザーIDベースにするなど調整可能です。
-
----
-
-### @event
-
-**概要**  
-フィールドの解決完了後にLaravelの**イベント**をディスパッチするディレクティブです。ミューテーション結果を他システムに伝えたり、非同期処理のトリガーとしたい場合に利用できます。
-
-**使用例**
-```graphql
-type Mutation {
-  createPost(input: CreatePostInput!): Post 
-    @event(class: "App\\Events\\PostCreated")
-    @create
-}
-```
-または`@event(name: "PostCreated")`のようにイベント名だけ指定し、Lighthouse側でイベントクラスのインスタンス生成方法を知っている場合も利用可能です（正確なシグネチャはLighthouseドキュメント参照）。
-
-**注意点**
-- `@event`ディレクティブを使うと、指定イベントが`Event::dispatch()`されます。`class`でクラス名、`name`で文字列名の指定ができますが、`name`の場合はイベントクラスのインスタンス生成方法をLighthouseが知っている必要があります。
-- イベントにはリゾルバから得られた結果や引数を渡すこともできます。GraphQLの応答には影響しませんが、イベントリスナー側で例外が出るとミューテーション自体が失敗する点に注意してください。
 
 --- 

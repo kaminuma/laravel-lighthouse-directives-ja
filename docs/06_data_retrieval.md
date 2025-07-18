@@ -26,69 +26,52 @@ type Query {
 ### @paginate
 
 **概要**  
-複数エントリを**ページネーション**付きで取得するクエリフィールドを定義するディレクティブです。クライアントがページサイズやページ番号を指定できるよう、フィールドの引数と返却型を自動的に変換します。
+複数のエントリをページネーションしてクエリするディレクティブです。
 
 **使用例**
 ```graphql
 type Query {
-  posts: [Post!]! @paginate
+  users: [User!]! @paginate(type: "paginator", defaultCount: 10)
 }
 ```
-このスキーマ定義は実行時に自動で次のように変換されます：
-```graphql
-type Query {
-  posts(first: Int!, page: Int): PostPaginator
-}
-type PostPaginator {
-  data: [Post!]!
-  paginatorInfo: PaginatorInfo!
-}
-```
-クライアントは`posts(first: 10, page: 2)`のようにページサイズ・ページ番号を指定できます。`PostPaginator.data`にPostリスト、`paginatorInfo`にページ情報（total, currentPage等）が含まれます。
 
 **注意点**
-- `type`引数でページネーション方式を切り替えられ、デフォルトは`PAGINATOR`（総件数含むページネーション）です。他に`SIMPLE`（簡易、総件数なし）や`CONNECTION`（Relay風カーソル方式）があります。
-- Relayの`CONNECTION`も内部的にはオフセットに変換される点に注意してください。
-- @paginateはルートクエリ専用で、**リレーションのページネーションには**代わりに`@hasMany(type: ...)`等のリレーションディレクティブを使います。
+- type（paginator, connection, simple）でページネーション方式を選択可能。
+- defaultCountやmaxCountで件数制御。
 
 ---
 
 ### @find
 
 **概要**  
-条件にマッチする**単一のモデル**を検索して返すフィールドを定義するディレクティブです。主キーやユニークキーで検索する典型的なクエリをシンプルに記述できます。
+主キーで単一モデルを検索するディレクティブです。該当IDがなければnullを返します。
 
 **使用例**
 ```graphql
 type Query {
-  userById(id: ID! @whereKey): User @find
+  user(id: ID!): User @find
 }
 ```
-この例で`id`に対応するUserモデルを1件取得し返します。`@whereKey`は主キーによる検索条件を付与するための入力ディレクティブです（後述）。
 
 **注意点**
-- 複数件ヒットした場合（通常主キー検索では起こりませんが）@findはエラーを投げます。一方、該当なしの場合は`null`を返す仕様です。
-- クエリ条件によっては複数マッチの可能性がある場合、代わりに@firstの使用を検討してください。
-- デフォルトのモデル推測が効かない場合は`model`引数で対象モデルを明示できます。
+- 複数ID指定時はエラー。
 
 ---
 
 ### @first
 
 **概要**  
-複数ヒットする可能性のあるクエリから**最初の1件**を返すディレクティブです。@findと異なり、複数マッチしてもエラーとせず最初の結果を返し、該当なしならnullとなります。
+Eloquentモデルコレクションから最初の結果を取得するディレクティブです。
 
 **使用例**
 ```graphql
 type Query {
-  firstPost(title: String @where(operator: "like")): Post @first
+  firstUser: User @first
 }
 ```
-クライアントが`title: "%GraphQL%"`のように検索文字列を与えると、その条件にマッチした最初のPostを返します（2件目以降は無視）。
 
 **注意点**
-- @firstは内部的にはEloquentの`->first()`を使うイメージで、コレクションの先頭要素だけを取り出します。
-- 大量データから無制限に検索するとパフォーマンスに影響する場合があるため、必要に応じて別途`@limit`等で件数を制限したり適切なインデックスを用意してください。
+- 複数結果でもエラーにならず、最初の1件のみ返す。
 
 ---
 
@@ -142,40 +125,34 @@ Albumに紐づくSongの`rating`カラム平均を計算します。
 ### @orderBy
 
 **概要**  
-結果の**並び順**を指定するディレクティブです。通常、GraphQLスキーマ上にソート用の引数（例：`orderBy`）を設け、このディレクティブを付与することでクエリビルダに`ORDER BY`句を適用します。
+クエリ結果の並び順を指定するディレクティブです。
 
 **使用例**
 ```graphql
 type Query {
-  posts(orderBy: SortOrder @orderBy(column: "title")): [Post!]! @all
+  users: [User!]! @all @orderBy(column: "created_at", direction: DESC)
 }
 ```
-この例では、`orderBy: ASC`なら`ORDER BY title ASC`がSQLに付与されます。
 
 **注意点**
-- @orderByは文字列引数に対して直接使うこともできますが、多くの場合**専用の入力型や列挙型**と組み合わせます。
-- Lighthouseは自動的に引数名やenumからカラム名を推測しますが、`column`引数でカラムを明示することも可能です。
-- 複数列でのソートには`columns`引数や、あるいは@orderByを繰り返し（repeatable）適用する方法も提供されています（詳細はOrderingの章を参照）。ビルダ強化が必要な点は他のWhere系と同様です。
+- column, direction引数で制御。
 
 ---
 
 ### @limit
 
 **概要**  
-クエリで返す**最大件数**を制限するディレクティブです。引数として使う場合はクライアントが上限数を指定でき、フィールドに直接付けると固定の最大件数を適用します。
+取得件数の上限を指定するディレクティブです。
 
 **使用例**
 ```graphql
 type Query {
-  users(limit: Int @limit): [User!]!
+  users: [User!]! @all @limit(max: 100)
 }
 ```
-クライアントが`limit: 4`を指定すれば最大4件までが返ります。
 
 **注意点**
-- 上記のように引数定義に付与した場合、Resolverが取得した結果コレクションの先頭N件のみ返します。一方、`builder: true`を指定すると、SQLレベルで`LIMIT`句を付与します。
-- `builder: true`は主に**ルートクエリ**で使うべきで、リレーションに対して使うとバッチロードに支障が出る場合があります。
-- 大量データの誤取得を防ぐ安全措置として活用できます。
+- max引数で上限指定。
 
 ---
 
@@ -212,26 +189,24 @@ type Query {
 ### @search
 
 **概要**  
-**全文検索**（フルテキストサーチ）を行うためのディレクティブです。データベースの全文検索インデックスやLaravel Scout等を利用し、テキストフィールドに対する検索を簡潔に実装します。
+全文検索やLIKE検索を簡単に実装できるディレクティブです。
 
 **使用例**
 ```graphql
 type Query {
-  searchPosts(query: String @search): [Post!]! @all
+  searchUsers(query: String!): [User!]! @search(fields: ["name", "email"])
 }
 ```
-クライアントが`query: "GraphQL Lighthouse"`のように検索語を渡すと、データベースの全文検索機能（例：MySQLのMATCH AGAINSTやPostgresのTSV等）を使って関連するPostレコードを取得します。
 
 **注意点**
-- このディレクティブを利用するには対応するドライバやインデックスの準備が必要です。Lighthouse自体はLaravel Scout経由でAlgoliaやMeiliSearch等も扱えますが、`@search`ディレクティブ単体では基本的に**MySQL InnoDBのFULLTEXT**や**PostgreSQLのto_tsvector**に対応した実装となっています。
-- 大量データに対するLIKE検索を避けるために使う一方、結果のスコアリングや並び替えには別途工夫が必要です。
+- fields引数で検索対象カラムを指定。
 
 ---
 
 ### @node
 
 **概要**  
-Relay規約に基づく**グローバルID**によるノード取得を実装するディレクティブです。`Node`インターフェースを各型に適用し、グローバルなIDでフェッチできるようにします。
+Relay仕様のNode型を定義するディレクティブです。
 
 **使用例**
 ```graphql
@@ -260,20 +235,302 @@ type Query {
 ### @globalId
 
 **概要**  
-GraphQLの`ID`フィールドを**グローバルID形式**（Relay方式）でエンコード/デコードするディレクティブです。具体的には、「Base64エンコードされた 'モデル名:ID'」の形式と通常の数値IDを相互変換します。
+Relay仕様のグローバルIDを生成・解決するディレクティブです。
 
 **使用例**
 ```graphql
-type User implements Node {
+type User {
   id: ID! @globalId
+}
+```
+
+**注意点**
+- Relay互換API構築時に利用。
+
+---
+
+### @hash
+
+**概要**  
+値をハッシュ化して保存・返却するディレクティブです。
+
+**使用例**
+```graphql
+type Mutation {
+  setPassword(password: String! @hash): User
+}
+```
+
+**注意点**
+- パスワード等のセキュアな値に利用。
+
+---
+
+### @inject
+
+**概要**  
+サービスコンテナから依存オブジェクトを注入するディレクティブです。
+
+**使用例**
+```graphql
+type Query {
+  currentUser: User @inject(service: "App\\Services\\UserService")
+}
+```
+
+**注意点**
+- service引数でクラス名指定。
+
+---
+
+### @like
+
+**概要**  
+LIKE検索を行うディレクティブです。
+
+**使用例**
+```graphql
+type Query {
+  usersByName(name: String!): [User!]! @like(column: "name")
+}
+```
+
+**注意点**
+- column引数で対象カラム指定。
+
+---
+
+### @throttle
+
+**概要**  
+リクエスト回数制限（レートリミット）を適用するディレクティブです。
+
+**使用例**
+```graphql
+type Mutation {
+  updateUser(input: UpdateUserInput!): User @throttle(maxAttempts: 5, decayMinutes: 1)
+}
+```
+
+**注意点**
+- maxAttempts, decayMinutes等で制御。
+
+---
+
+### @union
+
+**概要**  
+GraphQLのUnion型を定義するディレクティブです。
+
+**使用例**
+```graphql
+union SearchResult @union {
+  User
+  Post
+}
+```
+
+**注意点**
+- 型の組み合わせに注意。
+
+---
+
+### @withoutGlobalScopes
+
+**概要**  
+クエリビルダーからグローバルスコープを除外するディレクティブです。
+
+**使用例**
+```graphql
+type Query {
+  users: [User!]! @all @withoutGlobalScopes(scopes: ["active"])
+}
+```
+
+**注意点**
+- scopes引数で除外するスコープ名を指定。
+
+---
+
+### @rename
+
+**概要**  
+GraphQLスキーマ上のフィールド名と、実際のEloquentモデルやDBカラム名をマッピングするディレクティブです。
+
+**使用例**
+```graphql
+type User {
+  fullName: String! @rename(attribute: "full_name")
+}
+```
+
+**注意点**
+- attribute引数でDBカラム名を指定。
+
+---
+
+### @spread
+
+**概要**  
+入力型のフィールドを親の引数として展開するディレクティブです。
+
+**使用例**
+```graphql
+type Mutation {
+  updateUser(input: UpdateUserInput! @spread): User
+}
+```
+
+**注意点**
+- 入力型のネストをフラットに扱いたい場合に便利。
+
+---
+
+### @trashed
+
+**概要**  
+ソフトデリートされたレコードも含めて取得するディレクティブです。
+
+**使用例**
+```graphql
+type Query {
+  users: [User!]! @all @trashed
+}
+```
+
+**注意点**
+- only, with, without引数で取得範囲を制御。
+
+---
+
+### @softDeletes
+
+**概要**  
+ソフトデリート機能を有効にするディレクティブです。
+
+**使用例**
+```graphql
+type User @softDeletes {
   ...
 }
 ```
-この例で、クライアントに返される`id`は例えば`"VXNlcjoz"`のようなBase64文字列になります（`User:3`をエンコード）。クライアントからこのグローバルIDを`node`クエリ等で送ると、自動的にデコードされ適切なモデル（UserのID=3）を取得します。
 
 **注意点**
-- `@globalId`は**エンコードとデコード両方**を面倒見ます。スキーマ上の型はID!のままで、クライアントにはBase64文字列、内部では通常のID数値として扱われます。
-- 既存スキーマに後から導入するとID形式が変わるため、導入は慎重に。
-- Relay準拠クライアント（Apollo等）を使う場合に主に必要となる機能です。
+- EloquentモデルでSoftDeletesトレイトが必要。
 
---- 
+---
+
+### @scope
+
+**概要**  
+EloquentスコープをGraphQLクエリで適用できるディレクティブです。
+
+**使用例**
+```graphql
+type Query {
+  users: [User!]! @all @scope(name: "active")
+}
+```
+
+**注意点**
+- name引数でスコープ名を指定。
+
+---
+
+### @convertEmptyStringsToNull
+
+**概要**  
+空文字列をnullに変換するディレクティブです。
+
+**使用例**
+```graphql
+type Mutation {
+  updateUser(input: UpdateUserInput! @convertEmptyStringsToNull): User
+}
+```
+
+**注意点**
+- 入力値の前処理に便利。
+
+---
+
+### @trim
+
+**概要**  
+入力値の前後の空白を自動でトリムするディレクティブです。
+
+**使用例**
+```graphql
+type Mutation {
+  updateUser(input: UpdateUserInput! @trim): User
+}
+```
+
+**注意点**
+- 入力値の前処理に便利。
+
+---
+
+### @drop
+
+**概要**  
+フィールドや型をスキーマから除外するディレクティブです。
+
+**使用例**
+```graphql
+type User {
+  password: String @drop
+}
+```
+
+**注意点**
+- セキュリティや不要フィールドの除外に活用。 
+
+---
+
+### @whereConditions
+
+**概要**  
+複雑なAND/OR条件やネストしたwhere句をGraphQL入力型で柔軟に指定できるディレクティブです。
+
+**使用例**
+```graphql
+type Query {
+  users(where: WhereConditions @whereConditions): [User!]! @all
+}
+
+input WhereConditions {
+  AND: [WhereConditions!]
+  OR: [WhereConditions!]
+  column: String
+  operator: String
+  value: String
+}
+```
+
+**注意点**
+- @allや@hasMany等のデータ取得系ディレクティブと併用します。
+- 入力型の設計に注意。
+
+---
+
+### @whereHasConditions
+
+**概要**  
+リレーション先に対する複雑なwhere条件を指定できるディレクティブです。
+
+**使用例**
+```graphql
+type Query {
+  users(whereHas: WhereHasConditions @whereHasConditions): [User!]! @all
+}
+
+input WhereHasConditions {
+  relation: String!
+  condition: WhereConditions
+}
+```
+
+**注意点**
+- @allや@hasMany等のデータ取得系ディレクティブと併用します。
+- relation引数でリレーション名を指定。 

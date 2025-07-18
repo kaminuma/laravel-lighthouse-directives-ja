@@ -5,43 +5,75 @@
 ### @auth
 
 **概要**  
-現在認証済みのユーザーをクエリの結果として返すディレクティブです。  
-主に `Query.me` フィールドなどに適用し、ログインユーザーのデータを取得します。
+GraphQLフィールドや型に認証（LaravelのAuth）を適用するディレクティブです。
 
 **使用例**
 ```graphql
-me: User @auth
+type Query {
+  me: User @auth
+}
 ```
-このようにスキーマに記述すると、ログイン中のユーザー情報を取得できます。
-複数のガードを指定したい場合は引数`guards`で配列を渡せます（例：`@auth(guards: ["api"])`）。
 
 **注意点**
-- `guards`を省略するとデフォルトガードが使われます。
-- 複数ガードを指定した場合、先に認証に成功したガードが採用されます。
-- 認証されていない状態でフィールドをクエリすると、nullを返すか認可エラーになります。
-- 利用時は必ずユーザーがログイン済みであることを前提にしてください。
+- guard引数で認証ガードを指定可能。
 
 ---
 
 ### @guard
 
 **概要**  
-Laravelのガードを用いてフィールドへのアクセスを認証するディレクティブです。  
-`@auth`と異なり、フィールドの解決前に指定ガードでの認証チェックを行います。
+認証ガードを明示的に指定するディレクティブです。
 
 **使用例**
 ```graphql
-extend type Query @guard {
-  ...
+type Query {
+  me: User @guard(name: "api")
 }
-# 個別フィールドにも付与可能
-secretData: String @guard(guards: ["web"])
 ```
 
 **注意点**
-- `@guard`自体はユーザーをログイン状態にするものではありません。
-- 認証ミドルウェア（例：`AttemptAuthentication`）を設定し、未認証ユーザーが適切に弾かれるようにする必要があります。
-- `@guard`は他のディレクティブより前に実行され（フィールドミドルウェアとして適用されるため）、認証されていない場合は後続の処理を実行しません。
+- name引数でガード名を指定。
+
+---
+
+### @can
+
+**概要**  
+認可ポリシー（LaravelのPolicy）をGraphQLフィールドに適用するディレクティブです。
+
+**使用例**
+```graphql
+type Query {
+  user(id: ID!): User @can(ability: "view")
+}
+```
+
+**注意点**
+- ability引数で許可するアクションを指定。
+- @can* family（@canIf, @canUnless等）も同様の認可制御に利用。
+
+---
+
+### @can* family
+
+**概要**  
+@canIf, @canUnlessなど、条件付き認可を実現するディレクティブ群です。
+
+**使用例**
+```graphql
+type Query {
+  user(id: ID!): User @canIf(ability: "view", condition: true)
+}
+```
+
+**注意点**
+- ability, condition等で柔軟な認可制御。
+
+---
+
+### @rules, @rulesForArray, @validator
+
+これらのバリデーション系ディレクティブの詳細は「05_field_control.md」を参照してください。
 
 ---
 
