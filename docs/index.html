@@ -2,234 +2,524 @@
 <html lang="ja">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Lighthouse ディレクティブ解説集</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
-  <link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
+  <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+  <meta name="description" content="Lighthouse PHP GraphQLディレクティブの詳細な解説集">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, minimum-scale=1.0">
+  <link rel="stylesheet" href="//cdn.jsdelivr.net/npm/docsify@4/lib/themes/vue.css">
+  <!-- テーマのカスタマイズ -->
   <style>
-    .directive-search-box {
-      margin: 2em auto 1em auto;
-      max-width: 480px;
-      display: flex;
-      flex-direction: column;
-      align-items: stretch;
+    :root {
+      --theme-color: #41b883;
+      --sidebar-width: 300px;
     }
-    /* Docsifyの.contentクラスの上部余白を詰める */
-    .content {
-      padding-top: 0 !important;
+    .search {
+      margin-bottom: 20px;
+      padding: 6px;
     }
-    .directive-search-box input {
-      padding: 0.6em 1em;
-      font-size: 1.1em;
-      border: 1px solid #ccc;
-      border-radius: 4px;
-      margin-bottom: 0.5em;
+    .search input {
+      padding: 10px;
+      width: 100%;
+      border-radius: 5px;
+      border: 1px solid #e3e3e3;
     }
-    .directive-search-results {
-      background: #fff;
-      border-radius: 6px;
-      box-shadow: 0 2px 8px #0001;
-      padding: 2em 1em 1em 1em;
-      margin-top: 1.5em;
+    .search input:focus {
+      border-color: var(--theme-color);
+      box-shadow: 0 0 5px rgba(65, 184, 131, 0.5);
     }
-    .directive-search-results ul {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-    .directive-search-results li {
-      margin-bottom: 0.7em;
-      border-bottom: 1px solid #eee;
-      padding-bottom: 0.5em;
-    }
-    .directive-search-results li:last-child {
-      border-bottom: none;
-    }
-    .directive-search-results .dir-name {
+    .sidebar-nav > ul > li > a {
       font-weight: bold;
-      color: #42b983;
-      font-size: 1.1em;
     }
-    .directive-search-results .dir-summary {
-      color: #444;
-      font-size: 0.98em;
-      margin-top: 0.1em;
+    .app-name {
+      padding: 10px 0;
+    }
+    .app-name img {
+      max-width: 80%;
+      margin: 0 auto;
+      display: block;
+    }
+    /* 上部検索フォームのスタイル */
+    .top-search-container {
+      background: #f8f8f8;
+      padding: 15px;
+      border-bottom: 1px solid #e3e3e3;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+      display: flex;
+      align-items: center;
+    }
+    .top-search-form {
+      width: 100%;
+      max-width: 600px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .top-search-input {
+      width: 100%;
+      padding: 12px 20px;
+      font-size: 16px;
+      border: 2px solid #41b883;
+      border-radius: 30px;
+      outline: none;
+      transition: all 0.3s;
+    }
+    .top-search-input:focus {
+      box-shadow: 0 0 8px rgba(65, 184, 131, 0.6);
+    }
+    .top-search-icon {
+      position: absolute;
+      right: 15px;
+      top: 50%;
+      transform: translateY(-50%);
+      color: #41b883;
+      font-size: 20px;
+    }
+    .top-search-results {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      width: 100%;
+      background: white;
+      border-radius: 5px;
+      box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+      margin-top: 10px;
+      max-height: 400px;
+      overflow-y: auto;
+      display: none;
+      z-index: 20;
+    }
+    .top-search-results.show {
+      display: block;
+    }
+    .top-search-result-item {
+      padding: 12px 15px;
+      border-bottom: 1px solid #f0f0f0;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .top-search-result-item:hover {
+      background: #f5f5f5;
+    }
+    .top-search-result-item.selected {
+      background: #e8f7f0;
+      border-left: 3px solid #41b883;
+    }
+    .top-search-result-item h4 {
+      margin: 0 0 5px;
+      color: #41b883;
+    }
+    .top-search-result-item p {
+      margin: 0;
+      font-size: 14px;
+      color: #666;
+    }
+    /* レスポンシブデザイン */
+    @media (max-width: 768px) {
+      .top-search-container {
+        padding: 10px;
+      }
+      .top-search-input {
+        padding: 8px 15px;
+        font-size: 14px;
+      }
     }
   </style>
 </head>
 <body>
-  <div class="directive-search-box">
-    <input type="text" id="directive-search-input" placeholder="ディレクティブ名や説明で検索..." autocomplete="off">
-    <div class="directive-search-results" id="directive-search-results" style="display:none;"></div>
-  </div>
   <div id="app"></div>
   <script>
-    // ディレクティブ一覧データ
-    const directives = [
-      // 01 認証・認可
-      { name: '@auth', summary: '現在認証済みのユーザーを返す。主にQuery.meなどで利用。', link: '01_auth_permission.md' },
-      { name: '@guard', summary: '指定ガードでの認証チェックを行う。', link: '01_auth_permission.md' },
-      { name: '@canModel', summary: 'モデル全体や作成操作の認可（ポリシーability）を行う。', link: '01_auth_permission.md' },
-      { name: '@canFind', summary: 'ID等でモデルを検索し、その認可（ポリシーability）を行う。', link: '01_auth_permission.md' },
-      { name: '@canQuery', summary: '一覧取得クエリの結果に対して認可（ポリシーability）を行う。', link: '01_auth_permission.md' },
-      { name: '@canResolved', summary: '取得済みモデルインスタンスに対して認可（ポリシーability）を行う。', link: '01_auth_permission.md' },
-      { name: '@canRoot', summary: '親オブジェクトに対する認可（ポリシーability）を行う。', link: '01_auth_permission.md' },
-      { name: '@whereAuth', summary: '認証ユーザーに紐づくデータのみをフィルタする。', link: '01_auth_permission.md' },
-      // 02 リレーション
-      { name: '@belongsTo', summary: 'BelongsTo（1対多逆方向）リレーションを解決。', link: '02_relationships.md' },
-      { name: '@belongsToMany', summary: 'BelongsToMany（多対多）リレーションを解決。', link: '02_relationships.md' },
-      { name: '@hasOne', summary: 'HasOne（1対1）リレーションを解決。', link: '02_relationships.md' },
-      { name: '@hasMany', summary: 'HasMany（1対多）リレーションを解決。', link: '02_relationships.md' },
-      { name: '@hasOneThrough', summary: '中間テーブル経由の1対1リレーションを解決。', link: '02_relationships.md' },
-      { name: '@hasManyThrough', summary: '中間テーブル経由の1対多リレーションを解決。', link: '02_relationships.md' },
-      { name: '@morphOne', summary: 'ポリモーフィックな1対1リレーションを解決。', link: '02_relationships.md' },
-      { name: '@morphMany', summary: 'ポリモーフィックな1対多リレーションを解決。', link: '02_relationships.md' },
-      { name: '@morphTo', summary: 'ポリモーフィックな所属リレーションを解決。', link: '02_relationships.md' },
-      { name: '@morphToMany', summary: 'ポリモーフィックな多対多リレーションを解決。', link: '02_relationships.md' },
-      // 03 入力と検証
-      { name: '@spread', summary: 'ネスト入力オブジェクトのフィールドを親引数に展開。', link: '03_input_validation.md' },
-      { name: '@rules', summary: 'Laravelバリデーションルールで引数や入力を検証。', link: '03_input_validation.md' },
-      { name: '@rulesForArray', summary: '配列そのものにバリデーションを適用。', link: '03_input_validation.md' },
-      { name: '@validator', summary: 'カスタムPHPクラスでバリデーション。', link: '03_input_validation.md' },
-      { name: '@trim', summary: '文字列入力の前後空白を自動除去。', link: '03_input_validation.md' },
-      { name: '@hash', summary: '引数値をハッシュ化（主にパスワード用）。', link: '03_input_validation.md' },
-      { name: '@convertEmptyStringsToNull', summary: '空文字列を自動的にnullに変換。', link: '03_input_validation.md' },
-      { name: '@inject', summary: 'GraphQLコンテキストから値を自動注入。', link: '03_input_validation.md' },
-      { name: '@drop', summary: '引数値を無視（破棄）してリゾルバに渡さない。', link: '03_input_validation.md' },
-      // 04 モデルバインディング・Eloquent
-      { name: '@bind', summary: 'ID等からモデルインスタンスを自動取得・バインド。', link: '04_model_eloquent.md' },
-      { name: '@model', summary: 'GraphQL型とEloquentモデルクラスを明示的にマッピング。', link: '04_model_eloquent.md' },
-      { name: '@method', summary: '親オブジェクトのメソッドを呼び出して値を解決。', link: '04_model_eloquent.md' },
-      { name: '@scope', summary: 'Eloquentスコープメソッドをクエリビルダに適用。', link: '04_model_eloquent.md' },
-      { name: '@withoutGlobalScopes', summary: 'グローバルスコープをクエリから除外。', link: '04_model_eloquent.md' },
-      // 05 フィールド制御
-      { name: '@hide', summary: '指定要素をスキーマから除外しクライアントから隠す。', link: '05_field_control.md' },
-      { name: '@show', summary: '指定環境でのみスキーマに表示。', link: '05_field_control.md' },
-      { name: '@feature', summary: '機能フラグでスキーマ要素の公開/非公開を制御。', link: '05_field_control.md' },
-      { name: '@rename', summary: 'フィールドや引数の内部名を変更。', link: '05_field_control.md' },
-      // 06 データ取得とリゾルバ
-      { name: '@all', summary: 'モデルの全レコードを取得。', link: '06_data_retrieval.md' },
-      { name: '@paginate', summary: 'ページネーション付きで複数エントリを取得。', link: '06_data_retrieval.md' },
-      { name: '@find', summary: '単一モデルを検索して返す。', link: '06_data_retrieval.md' },
-      { name: '@first', summary: '複数ヒット時に最初の1件を返す。', link: '06_data_retrieval.md' },
-      { name: '@count', summary: '関連やモデル自体の件数を返す。', link: '06_data_retrieval.md' },
-      { name: '@aggregate', summary: '集計関数（SUM/AVG等）を実行し結果を返す。', link: '06_data_retrieval.md' },
-      { name: '@orderBy', summary: '結果の並び順を指定。', link: '06_data_retrieval.md' },
-      { name: '@limit', summary: '返す最大件数を制限。', link: '06_data_retrieval.md' },
-      { name: '@search', summary: '全文検索（フルテキストサーチ）を行う。', link: '06_data_retrieval.md' },
-      { name: '@node', summary: 'Relay規約のグローバルIDでノード取得。', link: '06_data_retrieval.md' },
-      { name: '@globalId', summary: 'IDをグローバルID形式でエンコード/デコード。', link: '06_data_retrieval.md' },
-      // 08 リアルタイム機能
-      { name: '@subscription', summary: 'サブスクリプションのブロードキャスト処理を定義。主にリアルタイム更新の購読に使用。', link: '08_realtime.md' },
-      { name: '@broadcast', summary: 'ミューテーション結果をサブスクライバーに配信。WebSocketやPusherで即時通知。', link: '08_realtime.md' },
-      { name: '@event', summary: 'フィールド解決後にLaravelイベントを発火。他のシステムとの連携に活用。', link: '08_realtime.md' },
-      // 09 パフォーマンス最適化
-      { name: '@cache', summary: 'コストの高いリゾルバ結果をキャッシュ。TTLやプライベートキャッシュを制御可能。', link: '09_performance.md' },
-      { name: '@cacheKey', summary: 'キャッシュキーのカスタマイズ。より細かい粒度でのキャッシュ制御が可能。', link: '09_performance.md' },
-      { name: '@clearCache', summary: 'タグベースでキャッシュを無効化。データ更新時の整合性維持に使用。', link: '09_performance.md' },
-      { name: '@with', summary: 'N+1問題を回避するEagerローディング。関連データを効率的に先読み。', link: '09_performance.md' },
-      { name: '@withCount', summary: 'リレーション件数のEagerローディング。COUNT(*)クエリを最適化。', link: '09_performance.md' },
-      { name: '@lazyLoad', summary: '必要になった時点で関連データを遅延ロード。メモリ使用を抑制。', link: '09_performance.md' },
-      { name: '@complexity', summary: 'クエリの複雑さをスコア化。重いクエリによるサーバー負荷を防止。', link: '09_performance.md' },
-      { name: '@throttle', summary: 'APIコール頻度を制限。リソース枯渇やDoS攻撃を防止。', link: '09_performance.md' },
-      // 10 スキーマカスタマイズ
-      { name: '@scalar', summary: 'カスタムスカラー型を定義。Date型やJSON型など独自の型を実装可能。', link: '10_schema_customization.md' },
-      { name: '@enum', summary: '列挙型の内部表現をカスタマイズ。DBの実値とAPI値のマッピング。', link: '10_schema_customization.md' },
-      { name: '@union', summary: 'ユニオン型の解決ロジックを定義。複数の型を単一フィールドで表現。', link: '10_schema_customization.md' },
-      { name: '@interface', summary: 'インターフェース実装の解決方法を定義。多態的な型システムを実現。', link: '10_schema_customization.md' },
-      { name: '@field', summary: 'フィールドにカスタムリゾルバを割り当て。複雑な値の解決ロジックを実装。', link: '10_schema_customization.md' },
-      { name: '@feature', summary: 'フィーチャーフラグでスキーマ要素を制御。段階的な機能リリースに対応。', link: '10_schema_customization.md' },
-      { name: '@hide', summary: '特定環境でスキーマ要素を非表示。開発/本番で異なるスキーマを提供。', link: '10_schema_customization.md' },
-      { name: '@show', summary: '特定環境でのみスキーマ要素を表示。環境依存の機能を制御。', link: '10_schema_customization.md' },
-      { name: '@deprecated', summary: 'APIの変更を予告。非推奨フィールドの移行期間を設定可能。', link: '10_schema_customization.md' },
-      
-      // 07 ユーティリティ
-      { name: '@async', summary: 'ミューテーションを非同期ジョブとして実行。', link: '07_utilities.md' },
-      { name: '@subscription', summary: 'サブスクリプションのブロードキャスト方法を指定。', link: '07_utilities.md' },
-      { name: '@cache', summary: 'フィールド結果をサーバーサイドキャッシュ。', link: '07_utilities.md' },
-      { name: '@cacheControl', summary: 'HTTPキャッシュヘッダのヒントを設定。', link: '07_utilities.md' },
-      { name: '@cacheKey', summary: 'キャッシュキーをカスタマイズ。', link: '07_utilities.md' },
-      { name: '@clearCache', summary: 'キャッシュを無効化（クリア）する。', link: '07_utilities.md' },
-      { name: '@complexity', summary: 'クエリ複雑度スコア計算をカスタマイズ。', link: '07_utilities.md' },
-      { name: '@throttle', summary: 'フィールドへのアクセス回数をレート制限。', link: '07_utilities.md' },
-      { name: '@event', summary: '解決完了後にLaravelイベントをディスパッチ。', link: '07_utilities.md' },
-    ];
-
-    const input = document.getElementById('directive-search-input');
-    const resultsBox = document.getElementById('directive-search-results');
-
-    // 検索ロジックの正規化用関数
-    function normalizeAnchor(anchor) {
-      // Docsifyのid生成ルールに合わせて@auth→auth（@や-を除去）
-      return anchor.replace(/^[@-]/, '').toLowerCase();
-    }
-    function fileNameNoMd(file) {
-      return file.replace(/\.md$/, '');
-    }
-
-    input.addEventListener('input', function() {
-      const q = input.value.trim().toLowerCase();
-      if (!q) {
-        resultsBox.style.display = 'none';
-        resultsBox.innerHTML = '';
-        return;
-      }
-      const filtered = directives.filter(d =>
-        d.name.toLowerCase().includes(q) ||
-        d.summary.toLowerCase().includes(q)
-      );
-      if (filtered.length === 0) {
-        resultsBox.innerHTML = '<div>該当するディレクティブはありません。</div>';
-        resultsBox.style.display = 'block';
-        return;
-      }
-      resultsBox.innerHTML = '<ul>' + filtered.map(d => {
-        // ルーティングとアンカーを正規化
-        const file = fileNameNoMd(d.link);
-        const anchor = normalizeAnchor(d.name);
-        const hashLink = `#/${file}?id=${anchor}`;
-        return `<li><a href="${hashLink}" class="dir-name directive-link" data-anchor="${anchor}">${d.name}</a><div class="dir-summary">${d.summary}</div></li>`;
-      }).join('') + '</ul>';
-      resultsBox.style.display = 'block';
-    });
-
-    // 検索候補クリック時のルーティング・表示整合性
-    document.addEventListener('click', function(e) {
-      if (e.target.classList.contains('directive-link')) {
-        // ディレクティブ名のみをフォームにセット
-        input.value = e.target.textContent;
-        // 候補一覧を非表示
-        resultsBox.style.display = 'none';
-        resultsBox.innerHTML = '';
-        // DocsifyのSPA遷移のため、setTimeoutで遷移後に実行
-        const anchor = e.target.getAttribute('data-anchor');
-        setTimeout(() => {
-          // id正規化（event）
-          let el = document.getElementById(anchor);
-          if (el) {
-            const orig = el.style.backgroundColor;
-            el.style.transition = 'background 0.7s';
-            el.style.backgroundColor = '#ffe082';
-            setTimeout(() => {
-              el.style.backgroundColor = orig || '';
-            }, 1200);
-          }
-        }, 350);
-      }
-    }, true);
-  </script>
-  <script>
+    // Lighthouse ディレクティブのインデックス
     window.$docsify = {
       name: 'Lighthouse ディレクティブ解説集',
-      repo: '',
+      repo: 'kaminuma/lighthouse-directives',
       loadSidebar: true,
-      subMaxLevel: 2,
-      search: 'auto',
+      subMaxLevel: 3,
       auto2top: true,
-      themeColor: '#42b983',
-    }
+      search: {
+        maxAge: 86400000, // 有効期限、1日
+        paths: 'auto',
+        placeholder: '検索',
+        noData: '結果が見つかりません',
+        depth: 6, // 検索の深さ
+        hideOtherSidebarContent: false,
+        // 検索インデックスの拡張
+        namespace: 'lighthouse-directives',
+      },
+      // ページ移動時のフック
+      plugins: [
+        function(hook, vm) {
+          // 上部検索フォームの追加
+          hook.afterEach(function(html, next) {
+            // 上部検索フォーム HTML
+            var topSearchHTML = `
+              <div class="top-search-container">
+                <div class="top-search-form">
+                  <input type="text" class="top-search-input" placeholder="Lighthouse ディレクティブを検索... (@all, @find など)">
+                  <i class="top-search-icon">🔍</i>
+                  <div class="top-search-results"></div>
+                </div>
+              </div>
+            `;
+            // コンテンツの先頭に検索フォームを追加
+            next(topSearchHTML + html);
+          });
+
+          // フッターの追加
+          hook.beforeEach(function(html) {
+            return html
+              + '\n\n----\n\n'
+              + '<footer>'
+              + '<span>© 2025 Lighthouse PHP ディレクティブ解説集</span>'
+              + '<span style="float: right;">更新日: ' + new Date().toLocaleDateString() + '</span>'
+              + '</footer>';
+          });
+
+          // DOMが読み込まれた後に検索機能を初期化
+          hook.doneEach(function() {
+            const topSearchInput = document.querySelector('.top-search-input');
+            const topSearchResults = document.querySelector('.top-search-results');
+            
+            if (topSearchInput) {
+              topSearchInput.addEventListener('input', function(e) {
+                const keyword = e.target.value.trim().toLowerCase();
+                
+                if (keyword.length < 2) {
+                  topSearchResults.innerHTML = '';
+                  topSearchResults.classList.remove('show');
+                  return;
+                }
+                
+                // ディレクティブのフィルタリングと検索結果の表示
+                const results = window.$docsify.search.handleLighthouseDirectives(keyword);
+                
+                if (results.length > 0) {
+                  let resultsHTML = '';
+                  results.slice(0, 10).forEach(result => {
+                    resultsHTML += `
+                      <div class="top-search-result-item" data-url="${result.url}">
+                        <h4>${result.title}</h4>
+                        <p>${result.content}</p>
+                      </div>
+                    `;
+                  });
+                  
+                  topSearchResults.innerHTML = resultsHTML;
+                  topSearchResults.classList.add('show');
+                  
+                  // 検索結果クリックイベント
+                  document.querySelectorAll('.top-search-result-item').forEach(item => {
+                    item.addEventListener('click', function() {
+                      window.location.href = this.getAttribute('data-url');
+                    });
+                  });
+                } else {
+                  topSearchResults.innerHTML = '<div class="top-search-result-item"><p>結果が見つかりません</p></div>';
+                  topSearchResults.classList.add('show');
+                }
+              });
+              
+              // 検索フォーム以外をクリックしたら結果を閉じる
+              document.addEventListener('click', function(e) {
+                if (!e.target.closest('.top-search-form')) {
+                  topSearchResults.classList.remove('show');
+                }
+              });
+
+              // キーボードナビゲーションのサポート
+              let selectedIndex = -1;
+              topSearchInput.addEventListener('keydown', function(e) {
+                const items = document.querySelectorAll('.top-search-result-item');
+                
+                // 下矢印キー
+                if (e.key === 'ArrowDown') {
+                  e.preventDefault();
+                  selectedIndex = Math.min(selectedIndex + 1, items.length - 1);
+                  highlightSelectedItem(items);
+                }
+                
+                // 上矢印キー
+                if (e.key === 'ArrowUp') {
+                  e.preventDefault();
+                  selectedIndex = Math.max(selectedIndex - 1, -1);
+                  highlightSelectedItem(items);
+                }
+                
+                // Enterキー
+                if (e.key === 'Enter') {
+                  if (selectedIndex >= 0 && items[selectedIndex]) {
+                    e.preventDefault();
+                    window.location.href = items[selectedIndex].getAttribute('data-url');
+                  } else if (items.length > 0) {
+                    // 選択されていない場合、最初の結果に移動
+                    window.location.href = items[0].getAttribute('data-url');
+                  }
+                }
+                
+                // Escキー
+                if (e.key === 'Escape') {
+                  topSearchResults.classList.remove('show');
+                  selectedIndex = -1;
+                }
+              });
+              
+              function highlightSelectedItem(items) {
+                items.forEach((item, index) => {
+                  if (index === selectedIndex) {
+                    item.classList.add('selected');
+                    item.scrollIntoView({ block: 'nearest' });
+                  } else {
+                    item.classList.remove('selected');
+                  }
+                });
+              }
+            }
+          });
+        }
+      ],
+      // コピーボタンの設定
+      copyCode: {
+        buttonText : 'コピー',
+        errorText  : 'エラー',
+        successText: 'コピー完了'
+      },
+      // タブ
+      tabs: {
+        persist    : true,
+        sync       : true,
+        theme      : 'classic',
+        tabComments: true,
+        tabHeadings: true
+      },
+      // ページのナビゲーション
+      pagination: {
+        previousText: '前へ',
+        nextText: '次へ',
+        crossChapter: true,
+        crossChapterText: true,
+      },
+      // ディレクティブのインデックス (検索用)
+      alias: {
+        '/.*/_sidebar.md': '/_sidebar.md',
+      }
+    };
   </script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify@4"></script>
-  <script src="https://cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
+  <!-- Docsify v4 -->
+  <script src="//cdn.jsdelivr.net/npm/docsify@4"></script>
+  <!-- 検索プラグイン -->
+  <script src="//cdn.jsdelivr.net/npm/docsify/lib/plugins/search.min.js"></script>
+  <!-- コードのコピープラグイン -->
+  <script src="//cdn.jsdelivr.net/npm/docsify-copy-code/dist/docsify-copy-code.min.js"></script>
+  <!-- タブ機能 -->
+  <script src="//cdn.jsdelivr.net/npm/docsify-tabs@1"></script>
+  <!-- ページナビゲーション -->
+  <script src="//cdn.jsdelivr.net/npm/docsify-pagination/dist/docsify-pagination.min.js"></script>
+  <!-- シンタックスハイライト -->
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-graphql.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-php.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-json.min.js"></script>
+  <script src="//cdn.jsdelivr.net/npm/prismjs@1/components/prism-bash.min.js"></script>
+  <!-- 検索のインデックス強化 -->
+  <script>
+    // ディレクティブの詳細リスト（検索対象に含めるため）
+    const lighthouseDirectives = [
+      { name: "@all", category: "eloquent", description: "全てのEloquentモデルを取得", details: "リレーションを解決する際に、関連する全てのモデルを取得します。通常、Lighthouseはリレーションの解決時に、リレーション元のモデルに紐づく全ての関連モデルを取得しようとします。" },
+      { name: "@find", category: "eloquent", description: "主キーでモデルを検索", details: "提供された引数（通常は主キー）に基づいてモデルを検索します。" },
+      { name: "@first", category: "eloquent", description: "最初のクエリ結果を取得", details: "Eloquentモデルのコレクションから最初のクエリ結果を取得します。" },
+      { name: "@aggregate", category: "eloquent", description: "集計値を返す", details: "指定されたリレーションシップまたはモデル内のカラムの集計値を返します。カラム、集計関数（AVG、SUM、MIN、MAX）、リレーション、モデル、またはビルダー関数を指定できます。" },
+      { name: "@count", category: "eloquent", description: "カウントを返す", details: "指定されたリレーションシップまたはモデルのカウントを返します。カラムやDISTINCT値のオプションがあります。" },
+      { name: "@belongsTo", category: "eloquent", description: "BelongsToリレーションシップ", details: "EloquentのBelongsToリレーションシップを通じてフィールドを解決します。フィールド名とリレーションシップメソッド名が同じであると仮定しますが、異なるリレーション名を指定することも可能です。" },
+      { name: "@belongsToMany", category: "eloquent", description: "BelongsToManyリレーションシップ", details: "多対多のリレーションシップを定義します。中間テーブルのデータを取得するのにも使えます。" },
+      { name: "@hasMany", category: "eloquent", description: "HasManyリレーションシップ", details: "一対多のリレーションシップを定義します。ページネーションをサポートします。" },
+      { name: "@hasOne", category: "eloquent", description: "HasOneリレーションシップ", details: "一対一のリレーションシップを定義します。" },
+      { name: "@hasManyThrough", category: "eloquent", description: "HasManyThroughリレーションシップ", details: "EloquentのHasManyThroughリレーションシップに対応し、@hasManyと同様の使い方が可能です。" },
+      { name: "@hasOneThrough", category: "eloquent", description: "HasOneThroughリレーションシップ", details: "EloquentのHasOneThroughリレーションシップに対応します。" },
+      { name: "@morphMany", category: "eloquent", description: "MorphManyリレーションシップ", details: "多態的な一対多のリレーションシップを定義します。ページネーションをサポートします。" },
+      { name: "@morphOne", category: "eloquent", description: "MorphOneリレーションシップ", details: "多態的な一対一のリレーションシップを定義します。" },
+      { name: "@morphTo", category: "eloquent", description: "MorphToリレーションシップ", details: "多態的なリレーションシップの逆側を定義します。" },
+      { name: "@morphToMany", category: "eloquent", description: "MorphToManyリレーションシップ", details: "多態的な多対多のリレーションシップを定義します。" },
+      { name: "@morphedByMany", category: "eloquent", description: "MorphedByManyリレーションシップ", details: "@morphToManyディレクティブの逆側を定義します。" },
+      { name: "@create", category: "eloquent", description: "新しいモデルを作成", details: "与えられた引数で新しいEloquentモデルを作成します。" },
+      { name: "@createMany", category: "eloquent", description: "複数のモデルを作成", details: "複数の新しいEloquentモデルを作成します。" },
+      { name: "@update", category: "eloquent", description: "モデルを更新", details: "与えられた引数でEloquentモデルを更新します。" },
+      { name: "@updateMany", category: "eloquent", description: "複数のモデルを更新", details: "複数のEloquentモデルを更新します。" },
+      { name: "@delete", category: "eloquent", description: "モデルを削除", details: "1つまたは複数のモデルを削除します。" },
+      { name: "@upsert", category: "eloquent", description: "モデルを作成または更新", details: "与えられた引数でEloquentモデルを作成または更新します。" },
+      { name: "@upsertMany", category: "eloquent", description: "複数のモデルを作成または更新", details: "複数のEloquentモデルを作成または更新します。" },
+      { name: "@builder", category: "eloquent", description: "クエリビルダーを操作", details: "指定されたメソッドでクエリビルダーを操作し、クエリに追加の制約を適用できます。" },
+      { name: "@scope", category: "eloquent", description: "スコープを追加", details: "クエリビルダーにスコープを追加し、引数のクライアント提供値をパラメータとして渡します。" },
+      { name: "@where", category: "eloquent", description: "whereフィルタを使用", details: "入力値をwhereフィルタとして使用し、様々な演算子やLaravelの句を許可します。" },
+      { name: "@whereNotNull", category: "eloquent", description: "null以外をフィルタリング", details: "値がnullではないことをフィルタリングします。" },
+      { name: "@whereNull", category: "eloquent", description: "nullをフィルタリング", details: "値がnullであることをフィルタリングします。" },
+      { name: "@whereBetween", category: "eloquent", description: "値の範囲をフィルタリング", details: "カラムの値が2つの値の間にあることを検証します。" },
+      { name: "@whereNotBetween", category: "eloquent", description: "値の範囲外をフィルタリング", details: "カラムの値が2つの値の範囲外にあることを検証します。" },
+      { name: "@with", category: "eloquent", description: "Eager Loading", details: "EloquentリレーションをEager Loadします。" },
+      { name: "@withCount", category: "eloquent", description: "リレーションのカウント", details: "フィールドがクエリされた場合に、EloquentリレーションのカウントをEager Loadします。" },
+      { name: "@withSum", category: "eloquent", description: "リレーションの合計", details: "リレーションの指定されたカラムの合計値をEagerロードします。" },
+      { name: "@withMax", category: "eloquent", description: "リレーションの最大値", details: "リレーションの指定されたカラムの最大値をEagerロードします。" },
+      { name: "@withMin", category: "eloquent", description: "リレーションの最小値", details: "リレーションの指定されたカラムの最小値をEagerロードします。" },
+      { name: "@paginate", category: "eloquent", description: "ページネーション", details: "複数のエントリをページネーションリストとしてクエリします。PAGINATOR、SIMPLE、CONNECTIONタイプをサポートします。" },
+      { name: "@softDeletes", category: "eloquent", description: "ソフトデリート機能", details: "フィールドにtrashed引数を追加することで、ゴミ箱に入った要素を取得するかどうかをフィルタリングできるようにします。" },
+      { name: "@orderBy", category: "eloquent", description: "結果のソート", details: "1つまたは複数の指定されたカラムで結果リストをソートします。" },
+      { name: "@limit", category: "eloquent", description: "結果の制限", details: "リレーションから取得されるアイテムの数を制限します。" },
+      { name: "@whereHas", category: "eloquent", description: "リレーション条件", details: "リレーションが存在する、または特定の条件を満たす場合にのみ、親モデルを返します。" },
+      { name: "@whereNotHas", category: "eloquent", description: "リレーション非存在", details: "リレーションが存在しない、または特定の条件を満たさない場合にのみ、親モデルを返します。" },
+      { name: "@softDelete", category: "eloquent", description: "論理削除", details: "モデルをソフトデリート（論理削除）するためのミューテーションを定義します。" },
+      { name: "@forceDelete", category: "eloquent", description: "完全削除", details: "ソフトデリートされたモデルを完全にデータベースから削除するためのミューテーションを定義します。" },
+      { name: "@restore", category: "eloquent", description: "モデルの復元", details: "ソフトデリートされたモデルを復元するためのミューテーションを定義します。" },
+      { name: "@in", category: "eloquent", description: "IN条件", details: "クライアントから提供されたリスト値を使用して、データベースクエリにIN条件を追加します。" },
+      { name: "@lazyLoad", category: "eloquent", description: "遅延Eager Load", details: "モデルのリストのリレーションに対して遅延Eager Loadを実行します。" },
+      { name: "@like", category: "eloquent", description: "LIKE条件", details: "データベースクエリにLIKE条件を追加します。" },
+      { name: "@model", category: "eloquent", description: "モデルマッピング", details: "モデルクラスをオブジェクトタイプにマッピングします。モデル名がタイプ名と異なる場合に便利です。" },
+      { name: "@neq", category: "eloquent", description: "Not-Equal条件", details: "クライアントから提供された値を使用して、データベースクエリにNot-Equal条件を追加します。" },
+      { name: "@notIn", category: "eloquent", description: "NOT IN条件", details: "クライアントから提供された値を使用して、データベースクエリにNOT IN条件を追加します。" },
+      { name: "@search", category: "eloquent", description: "全文検索", details: "指定された入力値で全文検索を実行します（Laravel Scoutが必要です）。" },
+      { name: "@trashed", category: "eloquent", description: "ゴミ箱フィルター", details: "ゴミ箱に入った要素を取得するかどうかをフィルタリングできるようにします。" },
+      { name: "@whereConditions", category: "eloquent", description: "複雑なWhere条件", details: "複雑な条件を持つWHERE句をクエリに追加します。" },
+      { name: "@whereHasConditions", category: "eloquent", description: "リレーション複雑条件", details: "リレーションシップに対して複雑な条件を持つWHERE句を追加します。" },
+      { name: "@whereJsonContains", category: "eloquent", description: "JSONフィルター", details: "入力値をwhereJsonContainsフィルタとして使用します。" },
+      { name: "@whereKey", category: "eloquent", description: "主キーフィルター", details: "Eloquentモデルクエリに主キーに対するwhere句を追加します。" },
+      { name: "@withoutGlobalScopes", category: "eloquent", description: "グローバルスコープ除外", details: "クエリビルダーから任意の数のグローバルスコープを省略します。" },
+
+      { name: "@auth", category: "auth", description: "認証ユーザーを取得", details: "クエリの結果として現在認証されているユーザーを返します。使用するガードを指定できます。" },
+      { name: "@can", category: "auth", description: "権限チェック", details: "特定のGraphQL操作を実行する前に、Laravelの認可ゲートまたはポリシーチェックを実行します。" },
+      { name: "@canFind", category: "auth", description: "検索権限チェック", details: "権限チェックを行います。@canファミリーの一種です。" },
+      { name: "@canModel", category: "auth", description: "モデル権限チェック", details: "モデル権限チェックを行います。@canファミリーの一種です。" },
+      { name: "@canQuery", category: "auth", description: "クエリ権限チェック", details: "クエリ権限チェックを行います。@canファミリーの一種です。" },
+      { name: "@canResolved", category: "auth", description: "解決済み値の権限チェック", details: "解決済み値に対する権限チェックを行います。@canファミリーの一種です。" },
+      { name: "@canRoot", category: "auth", description: "ルート権限チェック", details: "ルート権限チェックを行います。@canファミリーの一種です。" },
+      { name: "@guard", category: "auth", description: "認証ガードを指定", details: "config/auth.phpからの1つ以上のガードを通じて認証を実行します。" },
+      { name: "@whereAuth", category: "auth", description: "所有者のみにフィルタリング", details: "現在のユーザーが所有するインスタンスのみを返すようにタイプをフィルタリングします。" },
+      { name: "@sanctum", category: "auth", description: "Sanctum認証", details: "Laravel Sanctumを使用して、APIトークンに基づいて認証を処理します。" },
+
+      { name: "@async", category: "performance", description: "非同期実行", details: "ミューテーションの実行をキューに入れられたジョブに遅延させます。" },
+      { name: "@cache", category: "performance", description: "結果のキャッシュ", details: "フィールドの解決結果をキャッシュします。maxAge（期間）とprivate（ユーザー固有のキャッシュ）のオプションがあります。" },
+      { name: "@cacheControl", category: "performance", description: "キャッシュヘッダー制御", details: "レスポンスのHTTP Cache-Controlヘッダーに影響を与え、maxAgeとscope（PUBLIC/PRIVATE）を制御できます。" },
+      { name: "@cacheKey", category: "performance", description: "キャッシュキーの指定", details: "キャッシュを作成する際にキーとして使用するフィールドを指定します。" },
+      { name: "@clearCache", category: "performance", description: "キャッシュのクリア", details: "親タイプ、IDソース、クリアするフィールドを指定して、タグによってリゾルバキャッシュをクリアします。" },
+      { name: "@throttle", category: "performance", description: "レートリミット設定", details: "LaravelのThrottleRequestsミドルウェアと同様に、フィールドへのアクセスにレートリミットを設定します。" },
+      { name: "@complexity", category: "performance", description: "複雑度スコア", details: "実行前にフィールドの複雑度スコアの計算をカスタマイズし、カスタムリゾルバ関数を参照します。" },
+
+      { name: "@bind", category: "transform", description: "値のバインディング", details: "Laravelのルートモデルバインディングと同様に、引数値を対応するモデルまたは他の値に置き換えてからリゾルバに渡します。" },
+      { name: "@convertEmptyStringsToNull", category: "transform", description: "空文字をnullに変換", details: "入力された空文字列をnullに置き換えます。" },
+      { name: "@drop", category: "transform", description: "値を無視", details: "ユーザーが与えた値を無視し、リゾルバに渡されないようにします。" },
+      { name: "@globalId", category: "transform", description: "グローバルID変換", details: "ID/タイプとグローバルIDの間で変換を行い、フィールドではエンコードし、引数ではデコードします。" },
+      { name: "@hash", category: "transform", description: "値のハッシュ化", details: "Laravelのハッシュ機能を使用して引数値を変換します。パスワードに便利です。" },
+      { name: "@inject", category: "transform", description: "値の注入", details: "コンテキストオブジェクトから引数に値を注入します。" },
+      { name: "@rename", category: "transform", description: "内部名の変更", details: "クライアントの視点からスキーマを変更することなく、フィールドまたは引数の内部使用名を変更します。" },
+      { name: "@spread", category: "transform", description: "フィールドのマージ", details: "ネストされた入力オブジェクトのフィールドをその親の引数にマージします。" },
+      { name: "@trim", category: "transform", description: "空白の削除", details: "指定された入力の先頭と末尾から空白文字を削除します。" },
+      { name: "@upload", category: "transform", description: "ファイルアップロード", details: "指定されたファイルをストレージにアップロードし、引数を削除して、返されたパスを属性キーに設定します。" },
+      { name: "@nest", category: "transform", description: "ネスト展開", details: "ネストされたGraphQL入力タイプから値をフラットな引数リストに展開します。" },
+      { name: "@args", category: "transform", description: "引数のマッピング", details: "GraphQL入力オブジェクトを、下位のミューテーションまたはクエリフィールドへの引数としてマッピングします。" },
+      { name: "@db", category: "transform", description: "DB列名マッピング", details: "データベースカラムとGraphQLフィールド間のマッピングを明示的に定義します。" },
+      { name: "@invert", category: "transform", description: "論理反転", details: "boolean値の論理を反転させます。" },
+
+      { name: "@rules", category: "validation", description: "バリデーションルール", details: "GraphQLミューテーションの入力に対するバリデーションルールを定義します。" },
+      { name: "@rulesForArray", category: "validation", description: "配列のバリデーション", details: "Laravelの組み込みバリデーションを使用して配列自体にバリデーションを実行します。" },
+      { name: "@validator", category: "validation", description: "カスタムバリデータ", details: "PHPクラスを通じてバリデーションルールを提供します。" },
+      { name: "@default", category: "validation", description: "デフォルト値", details: "GraphQL入力フィールドのデフォルト値を指定します。" },
+
+      { name: "@broadcast", category: "schema", description: "結果のブロードキャスト", details: "ミューテーションの結果を購読しているクライアントにブロードキャストし、サブスクリプションフィールド名を参照します。" },
+      { name: "@deprecated", category: "schema", description: "非推奨マーク", details: "GraphQLスキーマの要素をサポート対象外としてマークし、オプションでreasonを指定できます。" },
+      { name: "@enum", category: "schema", description: "列挙型の内部値", details: "列挙型キーに内部値を割り当て、文字列キーとは異なる内部表現を可能にします。" },
+      { name: "@event", category: "schema", description: "イベント発火", details: "フィールドの解決後にイベントをディスパッチし、解決された値をイベントコンストラクタに渡します。" },
+      { name: "@feature", category: "schema", description: "機能フラグ", details: "Laravel Pennant機能の状態に応じて、アノテーションが付けられた要素をスキーマに含めます。" },
+      { name: "@field", category: "schema", description: "カスタムリゾルバ", details: "フィールドにリゾルバ関数を割り当て、データフェッチのカスタムロジックを可能にします。" },
+      { name: "@hide", category: "schema", description: "要素の除外", details: "環境に基づいてアノテーションが付けられた要素をスキーマから条件付きで除外します。" },
+      { name: "@interface", category: "schema", description: "インターフェース解決", details: "カスタムリゾルバを使用してインターフェースの具象型を決定します。" },
+      { name: "@method", category: "schema", description: "メソッド呼び出し", details: "親オブジェクトのメソッドを呼び出すことでフィールドを解決します。" },
+      { name: "@namespace", category: "schema", description: "名前空間再定義", details: "他のディレクティブで使用されるデフォルトの名前空間を再定義します。" },
+      { name: "@namespaced", category: "schema", description: "ネストの有効化", details: "懸念事項の分離のためにクエリとミューテーションのネストを可能にするno-opフィールドリゾルバを提供します。" },
+      { name: "@node", category: "schema", description: "グローバルオブジェクト識別", details: "Relayのグローバルオブジェクト識別のためにタイプを登録し、モデルまたはカスタムリゾルバを通じて解決できるようにします。" },
+      { name: "@scalar", category: "schema", description: "スカラー実装", details: "スカラー定義を実装するクラスを参照します。" },
+      { name: "@show", category: "schema", description: "要素の条件付き表示", details: "環境に基づいてアノテーションが付けられた要素をスキーマに条件付きで含めます。" },
+      { name: "@subscription", category: "schema", description: "サブスクリプション処理", details: "リアルタイムデータ更新のためのサブスクリプションを定義します。" },
+      { name: "@union", category: "schema", description: "ユニオン型解決", details: "カスタム関数を使用してユニオンの具象型を決定します。" },
+      { name: "@tag", category: "schema", description: "カスタムタグ", details: "GraphQLスキーマ要素にカスタムタグを追加します。" },
+      { name: "@implements", category: "schema", description: "インターフェース実装", details: "インターフェースが実装するインタフェースを指定します。" },
+      { name: "@directive", category: "schema", description: "カスタムディレクティブ", details: "カスタムディレクティブをスキーマで定義し、それらの引数をGraphQLのディレクティブ引数としてマッピングします。" },
+      { name: "@inaccessible", category: "schema", description: "アクセス不可", details: "このフィールドがGraphQLスキーマのイントロスペクションから除外されることを示します。" },
+      { name: "@crud", category: "schema", description: "CRUD操作生成", details: "単一のフィールド定義から、Create, Read, Update, DeleteのCRUD操作を生成します。" },
+      { name: "@collection", category: "schema", description: "コレクション結合", details: "複数のデータソースから取得したデータを単一のコレクションとして結合します。" }
+    ];
+
+    // カテゴリ情報の追加（検索結果の分類用）
+    const categories = {
+      "eloquent": "Eloquentとデータベース操作",
+      "auth": "認証と権限",
+      "performance": "パフォーマンスとキャッシュ",
+      "transform": "データ変換",
+      "validation": "バリデーション",
+      "schema": "スキーマ制御と高度な機能"
+    };
+
+    // 検索インデックスの拡張
+    if (typeof window.$docsify.search === 'object') {
+      window.$docsify.search.handleLighthouseDirectives = function(keyword) {
+        if (!keyword) return [];
+        
+        // ディレクティブ検索のためのフィルタリング
+        keyword = keyword.toLowerCase();
+        const results = lighthouseDirectives
+          .filter(dir => 
+            dir.name.toLowerCase().includes(keyword) || 
+            dir.description.toLowerCase().includes(keyword) ||
+            (dir.details && dir.details.toLowerCase().includes(keyword))
+          )
+          .map(dir => {
+            const category = categories[dir.category] || dir.category;
+            const title = `${dir.name} - ${dir.description}`;
+            const url = `#/${dir.category === 'eloquent' ? '02_eloquent_database' : 
+                            dir.category === 'auth' ? '03_auth_permission' :
+                            dir.category === 'performance' ? '04_performance_cache' :
+                            dir.category === 'transform' ? '05_data_transform' :
+                            dir.category === 'validation' ? '06_validation' : '07_schema_advanced'}`;
+            
+            // アンカーリンクを追加（ディレクティブ名からアンカーを生成）
+            const anchor = dir.name.replace('@', '').toLowerCase();
+            const fullUrl = `${url}#${anchor}`;
+            
+            return {
+              title: title,
+              content: `${category}ディレクティブ: ${dir.description}${dir.details ? ' - ' + dir.details : ''}`,
+              url: fullUrl,
+              score: (dir.name.toLowerCase() === '@' + keyword.toLowerCase()) ? 100 : 
+                     (dir.name.toLowerCase().includes(keyword)) ? 90 : 
+                     (dir.description.toLowerCase().includes(keyword)) ? 80 : 50
+            };
+          })
+          .sort((a, b) => b.score - a.score);
+        
+        return results;
+      };
+    }
+    
+    // 検索結果のカスタマイズ
+    window.$docsify.plugins = (window.$docsify.plugins || []).concat([
+      function(hook, vm) {
+        // 検索結果の表示をカスタマイズ
+        hook.afterEach(function(html) {
+          return html;
+        });
+        
+        // ディレクティブ検索結果の強調表示
+        hook.doneEach(function() {
+          const searchInput = document.querySelector('.search input');
+          if (searchInput && searchInput.value) {
+            const keyword = searchInput.value.toLowerCase();
+            const results = document.querySelectorAll('.search-result-item');
+            
+            results.forEach(item => {
+              const directiveName = item.querySelector('h2')?.textContent;
+              if (directiveName && directiveName.toLowerCase().includes('@' + keyword)) {
+                item.classList.add('highlighted-result');
+              }
+            });
+          }
+        });
+      }
+    ]);
+  </script>
 </body>
-</html> 
+</html>
