@@ -8,7 +8,10 @@
 
 ### @scalar
 
-スカラー定義を実装するクラスを参照します。
+スカラー定義を実装するクラスを参照します。カスタムスカラータイプの実装に使用します。
+
+**オプション**:
+- `class`: スカラー型を実装するクラスの完全修飾名
 
 ```graphql
 scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\DateTime")
@@ -16,7 +19,10 @@ scalar DateTime @scalar(class: "Nuwave\\Lighthouse\\Schema\\Types\\Scalars\\Date
 
 ### @enum
 
-列挙型キーに内部値を割り当て、文字列キーとは異なる内部表現を可能にします。
+列挙型キーに内部値を割り当て、文字列キーとは異なる内部表現を可能にします。データベースの数値や定数とGraphQLの列挙型をマッピングする場合に便利です。
+
+**オプション**:
+- `value`: 列挙値に割り当てる内部値（数値、文字列など）
 
 ```graphql
 enum UserRole {
@@ -28,7 +34,10 @@ enum UserRole {
 
 ### @union
 
-カスタム関数を使用してユニオンの具象型を決定します。
+カスタム関数を使用してユニオンの具象型を決定します。複数の異なるタイプを返す可能性があるクエリに必要です。
+
+**オプション**:
+- `resolveType`: 返されるオブジェクトの具体的なタイプを決定するリゾルバ関数
 
 ```graphql
 union SearchResult @union(resolveType: "App\\GraphQL\\Unions\\SearchResultType") = User | Post | Comment
@@ -36,7 +45,10 @@ union SearchResult @union(resolveType: "App\\GraphQL\\Unions\\SearchResultType")
 
 ### @interface
 
-カスタムリゾルバを使用してインターフェースの具象型を決定します。
+カスタムリゾルバを使用してインターフェースの具象型を決定します。共通の特性を持つ複数のタイプに対して使用します。
+
+**オプション**:
+- `resolveType`: 返されるオブジェクトの具体的なタイプを決定するリゾルバ関数
 
 ```graphql
 interface Node @interface(resolveType: "App\\GraphQL\\Interfaces\\NodeType") {
@@ -50,6 +62,10 @@ interface Node @interface(resolveType: "App\\GraphQL\\Interfaces\\NodeType") {
 
 フィールドにリゾルバ関数を割り当て、データフェッチのカスタムロジックを可能にします。
 
+**オプション**:
+- `resolver`: フィールド値を解決するPHPクラスとメソッド（完全修飾名）
+- `args`: リゾルバに渡す追加の引数配列
+
 ```graphql
 type User {
   fullName: String! @field(resolver: "App\\GraphQL\\Resolvers\\UserResolver@getFullName")
@@ -59,6 +75,10 @@ type User {
 ### @method
 
 親オブジェクトのメソッドを呼び出すことでフィールドを解決します。
+
+**オプション**:
+- `name`: 呼び出すメソッド名（デフォルトはフィールド名と同じ）
+- `passArguments`: メソッドに渡す引数（デフォルトは全ての引数）
 
 ```graphql
 type User {
@@ -70,7 +90,10 @@ type User {
 
 ### @deprecated
 
-GraphQLスキーマの要素をサポート対象外としてマークし、オプションでreasonを指定できます。
+GraphQLスキーマの要素をサポート対象外としてマークし、今後の使用を非推奨にします。
+
+**オプション**:
+- `reason`: 非推奨となった理由を説明するメッセージ
 
 ```graphql
 type User {
@@ -83,7 +106,10 @@ type User {
 
 ### @hide
 
-環境に基づいてアノテーションが付けられた要素をスキーマから条件付きで除外します。
+環境に基づいてアノテーションが付けられた要素をスキーマから条件付きで除外します。本番環境でテスト用フィールドを隠す場合などに便利です。
+
+**オプション**:
+- `env`: この要素を隠す環境名の配列（指定なしの場合は常に隠す）
 
 ```graphql
 type User {
@@ -94,7 +120,10 @@ type User {
 
 ### @show
 
-環境に基づいてアノテーションが付けられた要素をスキーマに条件付きで含めます。
+環境に基づいてアノテーションが付けられた要素をスキーマに条件付きで含めます。特定の環境でのみ表示したいフィールドに使用します。
+
+**オプション**:
+- `env`: この要素を表示する環境名の配列（指定なしの場合は常に表示）
 
 ```graphql
 type User {

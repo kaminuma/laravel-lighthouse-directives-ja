@@ -8,7 +8,11 @@
 
 ### @cache
 
-リゾルバの結果をキャッシュします。maxAge（期間）とprivate（ユーザー固有のキャッシュ）のオプションがあります。
+リゾルバの結果をキャッシュします。一度取得したデータを一定期間再利用することで、パフォーマンスを向上させます。
+
+**オプション**:
+- `maxAge`: キャッシュの有効期間（秒単位）
+- `private`: ユーザー固有のキャッシュにする場合はtrue（デフォルトはfalse）
 
 ```graphql
 type Query {
@@ -26,7 +30,10 @@ type Query {
 
 ### @cacheKey
 
-キャッシュを作成する際にキーとして使用するフィールドを指定します。
+キャッシュを作成する際にキーとして使用するフィールドを指定します。モデルのキャッシュにおいて、IDではなく別のフィールドをキーとして使用したい場合に役立ちます。
+
+**オプション**:
+- `field`: キャッシュキーとして使用するフィールド名
 
 ```graphql
 type User @cacheKey(field: "email") {
@@ -39,7 +46,12 @@ type User @cacheKey(field: "email") {
 
 ### @clearCache
 
-親タイプ、IDソース、クリアするフィールドを指定して、タグによってリゾルバキャッシュをクリアします。
+タグによってリゾルバキャッシュをクリアします。データが変更されたときに関連するキャッシュを無効化するのに最適です。
+
+**オプション**:
+- `type`: キャッシュをクリアするモデルタイプ名
+- `idSource`: IDを取得するソース（デフォルトは親モデルのIDフィールド）
+- `field`: 特定のフィールドのキャッシュのみをクリアする場合に指定
 
 ```graphql
 type Mutation {
@@ -58,7 +70,12 @@ type Mutation {
 
 ### @cacheControl
 
-レスポンスのHTTP Cache-Controlヘッダーに影響を与え、maxAgeとscope（PUBLIC/PRIVATE）を制御できます。
+レスポンスのHTTP Cache-Controlヘッダーに影響を与え、クライアント側のキャッシュ動作を制御します。
+
+**オプション**:
+- `maxAge`: キャッシュの最大寿命（秒単位）
+- `scope`: キャッシュのスコープ（PUBLIC/PRIVATE）
+- `inheritMaxAge`: 親フィールドからmaxAgeを継承するかどうか（boolean）
 
 ```graphql
 type Query @cacheControl(maxAge: 1800, scope: PUBLIC) {
@@ -79,7 +96,12 @@ type Query {
 
 ### @async
 
-ミューテーションの実行をキューに入れられたジョブに遅延させます。このディレクティブはルートミューテーションタイプのフィールドで使用され、実際の実行が非同期で行われる間、すぐにtrueを返します。
+ミューテーションの実行をキューに入れられたジョブに遅延させます。長時間実行される操作をバックグラウンドで実行するために使用します。
+
+**オプション**:
+- `queue`: 使用するキュー名（Laravelのキューシステム）
+- `connection`: 使用するキュー接続名
+- `maxRealTime`: 同期実行の最大時間（ミリ秒）
 
 ```graphql
 type Mutation {
@@ -91,7 +113,13 @@ type Mutation {
 
 ### @throttle
 
-LaravelのThrottleRequestsミドルウェアと同様に、フィールドへのアクセスにレートリミットを設定します。
+LaravelのThrottleRequestsミドルウェアと同様に、フィールドへのアクセスにレートリミットを設定します。APIの乱用を防ぐのに役立ちます。
+
+**オプション**:
+- `maxAttempts`: 許容される最大リクエスト回数
+- `decayMinutes`: レート制限がリセットされるまでの時間（分単位）
+- `limitByAuthenticatedUser`: ユーザーごとに制限するかどうか（boolean）
+- `limitByIp`: IPアドレスごとに制限するかどうか（boolean）
 
 ```graphql
 type Query {
