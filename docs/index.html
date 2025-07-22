@@ -210,7 +210,64 @@
                   // 検索結果クリックイベント
                   document.querySelectorAll('.top-search-result-item').forEach(item => {
                     item.addEventListener('click', function() {
-                      window.location.href = this.getAttribute('data-url');
+                      const url = this.getAttribute('data-url');
+                      
+                      // URLを正しく処理
+                      if (url) {
+                        // URLパターン #/ページ?id=アンカー から情報を抽出
+                        const urlParts = url.match(/#\/([^?]+)\?id=([^&]+)/);
+                        if (urlParts && urlParts.length >= 3) {
+                          const page = urlParts[1];
+                          const directiveWithAt = decodeURIComponent(urlParts[2]); // @を含む完全なディレクティブ名
+                          const directiveName = directiveWithAt.replace('@', '');  // @を除いたディレクティブ名
+                          
+                          // 現在のページと移動先が同じ場合はスクロールのみ
+                          if (window.location.hash.includes(page)) {
+                            // 同じページ内の移動
+                            setTimeout(() => {
+                              // 複数のセレクタを試して確実に要素を見つける
+                              let element = 
+                                // 1. H3見出しで完全一致: ### @directive
+                                document.querySelector(`h3:contains('${directiveWithAt}')`) || 
+                                // 2. IDやname属性で一致: id="directiveWithAt" (例: id="@in")
+                                document.querySelector(`[id="${directiveWithAt}"], [name="${directiveWithAt}"]`) ||
+                                // 3. @なしでID一致: id="in"
+                                document.querySelector(`[id="${directiveName}"], [name="${directiveName}"]`) ||
+                                // 4. H3テキストで@なしでの検索: ### in
+                                document.querySelector(`h3:contains('${directiveName}')`);
+                                
+                              if (element) {
+                                // 見つかった要素までスクロール
+                                element.scrollIntoView({ behavior: 'smooth' });
+                                // 見やすさのために要素をハイライト
+                                const originalBg = element.style.backgroundColor;
+                                element.style.backgroundColor = '#e8f7f0';
+                                element.style.transition = 'background-color 1s';
+                                setTimeout(() => {
+                                  element.style.backgroundColor = originalBg;
+                                }, 2000);
+                              } else {
+                                // 要素が見つからない場合、ディレクティブ名を含むH3を検索
+                                console.log('検索中のディレクティブ:', directiveWithAt);
+                                const h3Elements = document.querySelectorAll('h3');
+                                for (let i = 0; i < h3Elements.length; i++) {
+                                  if (h3Elements[i].textContent.includes(directiveWithAt) || 
+                                      h3Elements[i].textContent.includes(directiveName)) {
+                                    h3Elements[i].scrollIntoView({ behavior: 'smooth' });
+                                    break;
+                                  }
+                                }
+                              }
+                            }, 100);
+                          } else {
+                            // 別ページへの移動 - URLを設定して移動
+                            window.location.href = url;
+                          }
+                        } else {
+                          // フォールバック：単純な移動
+                          window.location.href = url;
+                        }
+                      }
                     });
                   });
                 } else {
@@ -272,6 +329,100 @@
                     item.classList.remove('selected');
                   }
                 });
+              }
+              
+              // カスタムセレクタ拡張（テキスト内容を含む要素を検索）
+              document.querySelector = document.querySelector || function() {};
+              const originalQuerySelector = document.querySelector;
+              document.querySelector = function(selector) {
+                if (typeof selector === 'string' && selector.includes(':contains(')) {
+                  try {
+                    // :contains() セレクタを処理
+                    const match = selector.match(/(.*):contains\(['"](.*)["']\)(.*)/);
+                    if (match) {
+                      const [, before, content, after] = match;
+                      // セレクタを分解して処理
+                      const baseSelector = (before + (after || '')).trim() || '*';
+                      const elements = document.querySelectorAll(baseSelector);
+                      
+                      // テキスト内容を含む最初の要素を返す
+                      for (let i = 0; i < elements.length; i++) {
+                        if (elements[i].textContent && elements[i].textContent.includes(content)) {
+                          return elements[i];
+                        }
+                      }
+                      
+                      // 特にH3タグの場合は特別な処理
+                      if (baseSelector === 'h3' || baseSelector.includes('h3')) {
+                        const h3s = document.querySelectorAll('h3');
+                        for (let i = 0; i < h3s.length; i++) {
+                          // ディレクティブ名は通常 "@name" の形式なので、完全一致と部分一致の両方を試す
+                          const h3Text = h3s[i].textContent.trim();
+                          if (h3Text === content || h3Text.includes(content)) {
+                            return h3s[i];
+                          }
+                        }
+                      }
+                      return null;
+                    }
+                  } catch (e) {
+                    console.error('カスタムセレクタエラー:', e);
+                  }
+                }
+                // 標準のquerySelector処理
+                return originalQuerySelector.call(document, selector);
+              };
+              
+              // ページロード後にアンカーリンクが指定されていれば、その位置にスクロール
+              if (window.location.hash && window.location.hash.includes('?id=')) {
+                const match = window.location.hash.match(/#\/[^?]+\?id=([^&]+)/);
+                if (match) {
+                  const directiveWithAt = decodeURIComponent(match[1]); // @付きディレクティブ名
+                  const directiveName = directiveWithAt.replace('@', ''); // @なしディレクティブ名
+                  
+                  // ページが完全に読み込まれるまで少し待つ
+                  setTimeout(() => {
+                    // より詳細な検索を実行
+                    let element = 
+                      // 1. H3見出しで完全一致: ### @directive
+                      document.querySelector(`h3:contains('${directiveWithAt}')`) || 
+                      // 2. IDやname属性で一致: id="directiveWithAt" (例: id="@in")
+                      document.querySelector(`[id="${directiveWithAt}"], [name="${directiveWithAt}"]`) ||
+                      // 3. @なしでID一致: id="in"
+                      document.querySelector(`[id="${directiveName}"], [name="${directiveName}"]`) ||
+                      // 4. H3テキストで@なしでの検索: ### in
+                      document.querySelector(`h3:contains('${directiveName}')`);
+
+                    if (element) {
+                      // 見つかった要素までスクロール
+                      element.scrollIntoView({ behavior: 'smooth' });
+                      // 見やすさのために要素をハイライト
+                      const originalBg = element.style.backgroundColor;
+                      element.style.backgroundColor = '#e8f7f0';
+                      element.style.transition = 'background-color 1s';
+                      setTimeout(() => {
+                        element.style.backgroundColor = originalBg;
+                      }, 2000);
+                    } else {
+                      // 要素が見つからない場合、すべてのH3をチェック
+                      console.log('検索中のディレクティブ:', directiveWithAt);
+                      let found = false;
+                      document.querySelectorAll('h3').forEach(h3 => {
+                        if (!found && (h3.textContent.includes(directiveWithAt) || h3.textContent.includes(directiveName))) {
+                          h3.scrollIntoView({ behavior: 'smooth' });
+                          found = true;
+                          // 見つかった見出しをハイライト
+                          const originalBg = h3.style.backgroundColor;
+                          h3.style.backgroundColor = '#e8f7f0';
+                          h3.style.transition = 'background-color 1s';
+                          setTimeout(() => {
+                            h3.style.backgroundColor = originalBg;
+                          }, 2000);
+                        }
+                      });
+                    }
+                  }, 500);
+                }
               }
             }
           });
@@ -470,15 +621,25 @@
           .map(dir => {
             const category = categories[dir.category] || dir.category;
             const title = `${dir.name} - ${dir.description}`;
-            const url = `#/${dir.category === 'eloquent' ? '02_eloquent_database' : 
-                            dir.category === 'auth' ? '03_auth_permission' :
-                            dir.category === 'performance' ? '04_performance_cache' :
-                            dir.category === 'transform' ? '05_data_transform' :
-                            dir.category === 'validation' ? '06_validation' : '07_schema_advanced'}`;
             
-            // アンカーリンクを追加（ディレクティブ名からアンカーを生成）
-            const anchor = dir.name.replace('@', '').toLowerCase();
-            const fullUrl = `${url}#${anchor}`;
+            // ページのURLを決定
+            let pagePath = '';
+            switch (dir.category) {
+              case 'eloquent': pagePath = '02_eloquent_database'; break;
+              case 'auth': pagePath = '03_auth_permission'; break;
+              case 'performance': pagePath = '04_performance_cache'; break;
+              case 'transform': pagePath = '05_data_transform'; break;
+              case 'validation': pagePath = '06_validation'; break;
+              case 'schema': pagePath = '07_schema_advanced'; break;
+              default: pagePath = '02_eloquent_database'; // デフォルト
+            }
+            
+            // ディレクティブ名 (@を含む) をアンカーとして使用
+            // H3見出しの「### @directiveName」形式に一致させる
+            const directiveNameWithAt = dir.name;  // @を含むディレクティブ名
+            
+            // 最終的なURL生成 - #を含めない形式に変更
+            const fullUrl = `#/${pagePath}?id=${encodeURIComponent(directiveNameWithAt)}`;
             
             return {
               title: title,
